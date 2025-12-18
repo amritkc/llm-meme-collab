@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../../app/session/SessionContext";
+import Templates from "../../Components/Templates/Templates";
 
 export default function Consent() {
   const nav = useNavigate();
