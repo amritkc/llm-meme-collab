@@ -39,7 +39,6 @@ function tryExtractJSON(text: string) {
   }
 }
 
-<<<<<<< Updated upstream
 export type AssistantMemeResult = {
   id?: string;
   templateId?: string;
@@ -62,8 +61,6 @@ export function normalizeAssistantMemes(parsed: unknown, templates: Template[]):
   });
 }
 
-=======
->>>>>>> Stashed changes
 export async function generateMemesAI(
   topic: Topic | null,
   templates: Template[],
@@ -107,24 +104,8 @@ export async function generateMemesAI(
     const assistant = body?.choices?.[0]?.message?.content ?? "";
     const parsed = tryExtractJSON(assistant);
 
-<<<<<<< Updated upstream
     // Normalize assistant output into a strongly-typed Meme[]
     const memes = normalizeAssistantMemes(parsed, templates);
-=======
-    const arr = Array.isArray(parsed) ? parsed : [parsed];
-
-    const memes: Meme[] = arr.map((it: any) => {
-      const template = templates.find((t) => t.id === it.templateId);
-      return {
-        id: crypto.randomUUID(),
-        templateId: it.templateId ?? template?.id ?? "",
-        caption: String(it.caption ?? ""),
-        imageUrl: template?.imageUrl ?? "",
-        source: "ai",
-      } as Meme;
-    });
-
->>>>>>> Stashed changes
     return memes;
   } catch (err) {
     console.error("generateMemesAI error:", err);
