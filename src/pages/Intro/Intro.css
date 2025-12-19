@@ -1,0 +1,18 @@
+/* Polished Intro styles used by IntroAI and IntroHuman */
+.intro-hero{background:linear-gradient(90deg,var(--brand-blue-dark),var(--brand-blue));color:white;padding:28px;border-radius:12px;display:flex;gap:20px;align-items:center}
+.intro-hero img{width:96px;height:96px;border-radius:10px;box-shadow:0 8px 20px rgba(4,29,69,0.18)}
+.intro-hero-content h1{margin:0;font-size:1.6rem}
+.intro-hero-sub{margin-top:8px;color:rgba(255,255,255,0.9)}
+
+.intro-card{background:linear-gradient(180deg,#ffffff,#fbfdff);padding:18px;border-radius:12px;border:1px solid rgba(4,29,69,0.04);box-shadow:0 12px 30px rgba(4,29,69,0.04);margin-top:18px}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.step{padding:12px;border-radius:10px;background:#fff;border:1px solid rgba(4,29,69,0.03);transition:transform var(--motion-duration) var(--motion-ease),box-shadow var(--motion-duration) var(--motion-ease)}
+.step:hover{transform:translateY(-6px);box-shadow:0 12px 30px rgba(4,29,69,0.06)}
+.step h3{margin:0;font-size:1rem;color:var(--brand-blue-dark)}
+.step p{margin-top:6px;color:var(--muted);font-size:14px}
+.cta-row{display:flex;gap:12px;justify-content:flex-end;margin-top:16px}
+.btn-primary{background:linear-gradient(90deg,var(--brand-blue-dark),var(--brand-blue));color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:700}
+.btn-outline{background:transparent;border:1px solid rgba(4,29,69,0.08);padding:9px 12px;border-radius:10px;color:var(--brand-blue-dark)}
+
+@media (max-width:720px){.intro-hero{flex-direction:column;align-items:flex-start}.cta-row{justify-content:stretch}}
