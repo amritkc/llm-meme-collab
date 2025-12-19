@@ -4,7 +4,6 @@ import { Box, Button, TextField, Stack } from "@mui/material";
 import { useSession } from "../../app/session/SessionContext";
 import type { Meme } from "../../app/session/types";
 import { generateMemesAI, askAIForHelp } from "../../services/meme";
-<<<<<<< Updated upstream
 import TemplateSelector, { type MemeTemplate } from "../../Components/Templates/TemplateSelector";
 import baby from "../../assets/templates/baby.jpg";
 import boromir from "../../assets/templates/boromir.jpg";
@@ -24,15 +23,11 @@ type PresetState = {
   secondsLeft: number;
   completed: boolean;
 };
-=======
-import "./TaskAIFirst.css";
->>>>>>> Stashed changes
 
 export default function TaskAIFirst() {
   const nav = useNavigate();
   const { topic, templates, memes, setMemes, setTopic, setTemplates } = useSession();
 
-<<<<<<< Updated upstream
   const PRESET_TOPICS = [
     {
       id: "school",
@@ -101,19 +96,10 @@ export default function TaskAIFirst() {
     } finally {
       setLoading(false);
     }
-=======
-  function fillSample() {
-    setTopic({ id: "sample-topic", title: "Work-from-home struggles", description: "Jokes about remote work and Zoom meetings" });
-    setTemplates([
-      { id: "t1", name: "Distracted Boyfriend", imageUrl: "/templates/t1.png" },
-      { id: "t2", name: "Drake", imageUrl: "/templates/t2.png" },
-    ]);
->>>>>>> Stashed changes
   }
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-<<<<<<< Updated upstream
   // active topic index (walks through PRESET_TOPICS)
   const [activeTopicIndex, setActiveTopicIndex] = useState(0);
 
@@ -132,15 +118,12 @@ export default function TaskAIFirst() {
   );
 
   // Current topic's local meme (single meme per topic)
-=======
->>>>>>> Stashed changes
   const [localMemes, setLocalMemes] = useState<Meme[]>(memes ?? []);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [lastSuggestion, setLastSuggestion] = useState<string | null>(null);
 
   useEffect(() => setLocalMemes(memes ?? []), [memes]);
 
-<<<<<<< Updated upstream
   function formatSeconds(s: number) {
     const mm = Math.floor(s / 60);
     const ss = s % 60;
@@ -171,8 +154,6 @@ export default function TaskAIFirst() {
   }, [presetStates, activeTopicIndex]);
 
 
-=======
->>>>>>> Stashed changes
   async function handleGenerate() {
     setError(null);
 
@@ -189,11 +170,8 @@ export default function TaskAIFirst() {
     setLoading(true);
     try {
       const generated = await generateMemesAI(topic, templates);
-<<<<<<< Updated upstream
 
 
-=======
->>>>>>> Stashed changes
       if (!generated || generated.length === 0) {
         setError("AI returned no memes. Try again or use sample data.");
         setLocalMemes([]);
@@ -203,13 +181,8 @@ export default function TaskAIFirst() {
         setMemes(generated);
         setSelectedIndex(0);
       }
-<<<<<<< Updated upstream
     } catch (err: unknown) {
       setError(String((err as Error)?.message ?? err));
-=======
-    } catch (err: any) {
-      setError(err?.message ?? String(err));
->>>>>>> Stashed changes
     } finally {
       setLoading(false);
     }
@@ -226,13 +199,8 @@ export default function TaskAIFirst() {
       } else {
         setError("No suggestion returned from AI");
       }
-<<<<<<< Updated upstream
     } catch (err: unknown) {
       setError(String((err as Error)?.message ?? err));
-=======
-    } catch (err: any) {
-      setError(err?.message ?? String(err));
->>>>>>> Stashed changes
     }
   }
 
@@ -242,7 +210,6 @@ export default function TaskAIFirst() {
     setLocalMemes(next);
     setMemes(next);
   }
-<<<<<<< Updated upstream
 
   function selectTemplateForMeme(i: number, templateId: string) {
     const tmpl = templates?.find((t) => t.id === templateId);
@@ -282,8 +249,6 @@ export default function TaskAIFirst() {
       nav('/review');
     }
   }
-=======
->>>>>>> Stashed changes
 
   return (
     <div className="ai-page">
@@ -294,7 +259,6 @@ export default function TaskAIFirst() {
 
       <section>
         <div className="controls">
-<<<<<<< Updated upstream
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
             <div style={{ display: 'flex', gap: 8 }}>
               {PRESET_TOPICS.map((p, i) => (
@@ -324,19 +288,6 @@ export default function TaskAIFirst() {
 
           {error && <p className="error">{error}</p>}
         </div>
-=======
-
-
-          <button className="btn btn-primary" disabled={loading} onClick={handleGenerate}>{loading ? "Generating..." : "Generate AI Meme"}</button>
-          <button className="btn btn-secondary" onClick={fillSample}>Use sample data</button>
-        </div>
-
-        <div style={{ marginTop: 8 }}>
-          <p className="small-muted">Topic: {topic ? topic.title : <em>None selected</em>} • Templates: {templates?.length ?? 0}</p>
-        </div>
-
-        {error && <p className="error">{error}</p>}
->>>>>>> Stashed changes
       </section>
 
       <div className="three-col">
@@ -348,22 +299,12 @@ export default function TaskAIFirst() {
           {error && <p className="error">{error}</p>}
 
           <div className="ai-list">
-<<<<<<< Updated upstream
             {presetStates.map((s, idx) => (
               <button key={s.id} className={`ai-list-item ${idx === activeTopicIndex ? 'selected' : ''}`} onClick={() => { setActiveTopicIndex(idx); setLocalMemes(s.meme ? [s.meme] : []); setMemes(s.meme ? [s.meme] : []); setSelectedIndex(0); }}>
                 <img src={s.meme?.imageUrl || "https://via.placeholder.com/120"} alt="thumb" className="thumb" />
                 <div className="meta">
                   <div className="template">{s.title}</div>
                   <div className="preview">{s.meme ? s.meme.caption : <em>No meme yet</em>}</div>
-=======
-            {localMemes.length === 0 && <p className="small-muted">(No AI memes yet)</p>}
-            {localMemes.map((m, i) => (
-              <button key={m.id} className={`ai-list-item ${i === selectedIndex ? 'selected' : ''}`} onClick={() => setSelectedIndex(i)}>
-                <img src={m.imageUrl || "https://via.placeholder.com/120"} alt="thumb" className="thumb" />
-                <div className="meta">
-                  <div className="template">{m.templateId}</div>
-                  <div className="preview">{m.caption}</div>
->>>>>>> Stashed changes
                 </div>
               </button>
             ))}
@@ -386,7 +327,6 @@ export default function TaskAIFirst() {
 
             {localMemes[selectedIndex] && (
               <div>
-<<<<<<< Updated upstream
                 {/* Template selector to allow changing the image/template */}
                 {templates && templates.length > 0 ? (
                   <div style={{ marginBottom: 12 }}>
@@ -420,16 +360,6 @@ export default function TaskAIFirst() {
                     <Button variant="contained" color="primary" onClick={() => finalizeCurrentTopic()}>Finalize & Continue</Button>
                   </Stack>
                 </Box>
-=======
-                <img src={localMemes[selectedIndex].imageUrl || "https://via.placeholder.com/300"} alt="selected" style={{ width: "100%", borderRadius: 8, marginBottom: 12 }} />
-                <label className="small-label">Caption</label>
-                <textarea value={localMemes[selectedIndex].caption} onChange={(e) => updateCaption(selectedIndex, e.target.value)} className="input-text" style={{ minHeight: 80 }} />
-
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <button className="btn btn-outline" onClick={() => { /* revert? later */ }}>Revert</button>
-                  <button className="btn btn-primary" onClick={() => nav('/review')}>Finalize & Continue</button>
-                </div>
->>>>>>> Stashed changes
               </div>
             )}
           </div>
