@@ -1,4 +1,3 @@
-import React from "react";
 import { Box, Card, CardActionArea, CardContent, Typography } from "@mui/material";
 
 export type MemeTemplate = {

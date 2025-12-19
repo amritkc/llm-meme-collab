@@ -41,7 +41,7 @@ import gru from "../../assets/templates/baby.jpg";
 import exitImg from "../../assets/templates/baby.jpg";
 import changemymind from "../../assets/templates/baby.jpg";
 
-const TOPIC_SECONDS = 60;
+const TOPIC_SECONDS = 300;
 
 const FALLBACK_TASKS: {
   topicId: string;
@@ -337,7 +337,7 @@ export default function TaskHumanFirst() {
         savedImagePath: result.filePath,
       });
 
-      setToast({ open: true, type: "success", msg: "Saved to Supabase ✅" });
+      setToast({ open: true, type: "success", msg: "Saved" });
 
       const isLast = activeIndex === tasks.length - 1;
       if (!isLast) {

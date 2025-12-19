@@ -16,7 +16,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: <RootLayout />,
     children: [
-      { index: true, element: <Navigate to="/task/human-first" replace /> },
+      { index: true, element: <Navigate to="/review" replace /> },
       { path: "consent", element: <Consent /> },
       { path: "intro/human", element: <IntroHuman /> },
       { path: "intro/ai", element: <IntroAI /> },
