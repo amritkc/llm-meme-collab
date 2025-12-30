@@ -10,8 +10,11 @@ An instance of Docker Must Be running (Docker Desktop or RancherDesktop)
 ```bash
 npm install -g supabase
 ```
+
 if it doesnt work then
 npx supabase init
+and then use the force command
+npx supabase init --force  
 
 2. **Configure environment variables**
 
