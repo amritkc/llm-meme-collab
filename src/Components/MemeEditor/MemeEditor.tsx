@@ -6,10 +6,7 @@ import {
   Typography,
   Paper,
   TextField,
-  IconButton,
-  Divider,
 } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
 export type MemeTextLayer = {
   id: string;

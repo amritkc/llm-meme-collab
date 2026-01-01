@@ -8,11 +8,7 @@ import {
   Radio,
   Paper,
   Typography,
-  IconButton,
-  Button,
-  Divider,
 } from "@mui/material";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import type { MemeTextLayer } from "../MemeEditor/MemeEditor";
 
 type IdeaState = { layers: MemeTextLayer[] };
@@ -39,24 +35,6 @@ export default function CaptionIdeasForm({
 
   const setCaptionText = (layers: MemeTextLayer[], text: string) =>
     layers.map((l) => (l.locked ? { ...l, text } : l));
-
-  const addExtra = (layers: MemeTextLayer[]) => [
-    ...layers,
-    {
-      id: makeId("extra"),
-      text: "",
-      xPct: 15,
-      yPct: 60,
-      fontSize: 24,
-      locked: false,
-    } as MemeTextLayer,
-  ];
-
-  const updateExtraText = (layers: MemeTextLayer[], id: string, text: string) =>
-    layers.map((l) => (l.id === id ? { ...l, text } : l));
-
-  const removeExtra = (layers: MemeTextLayer[], id: string) =>
-    layers.filter((l) => l.id !== id);
 
   return (
     <Stack spacing={2}>
@@ -88,7 +66,6 @@ export default function CaptionIdeasForm({
       {[0, 1, 2].map((i) => {
         const layers = ideas[i].layers;
         const caption = getCaptionLayer(layers);
-        const extras = layers.filter((l) => !l.locked);
         return (
           <Paper key={i} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>
