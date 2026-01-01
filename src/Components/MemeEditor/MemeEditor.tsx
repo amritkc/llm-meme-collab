@@ -227,22 +227,6 @@ export default function MemeEditor({
             />
           </Stack>
 
-          <Divider />
-
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="body2" fontWeight={700}>
-              Delete selected text box
-            </Typography>
-
-            <IconButton
-              onClick={() => activeLayer && deleteLayer(activeLayer.id)}
-              disabled={disabled || !!activeLayer?.locked}
-              title={activeLayer?.locked ? "Best caption cannot be deleted" : "Delete"}
-            >
-              <DeleteOutlineIcon />
-            </IconButton>
-          </Stack>
-
           {activeLayer?.locked && (
             <Typography variant="caption" color="text.secondary">
               The main (best) caption is locked and cannot be deleted.

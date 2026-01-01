@@ -20,24 +20,28 @@ function safePart(s: string) {
 export async function uploadMemeAndInsertRow(args: {
   bucket: string; // "memes"
   participantId: string;
+  prolificPid: string | null;
+  studyId: string | null;
+  sessionId: string | null;
+  task: string;
   topicId: string;
   templateId: string;
-
-  ideas: string[];
-  bestIdeaIndex: number;
-  bestCaption: string;
-
+  ideaIndex: number;
+  caption: string;
   layers: any;
   memeDataUrl: string; // base64 PNG from exportMemePNG
 }) {
   const {
     bucket,
     participantId,
+    prolificPid,
+    studyId,
+    sessionId,
+    task,
     topicId,
     templateId,
-    ideas,
-    bestIdeaIndex,
-    bestCaption,
+    ideaIndex,
+    caption,
     layers,
     memeDataUrl,
   } = args;
@@ -46,7 +50,7 @@ export async function uploadMemeAndInsertRow(args: {
   const t = safePart(topicId);
   const tpl = safePart(templateId);
 
-  const filePath = `${pid}/${t}__${tpl}__${Date.now()}.png`;
+  const filePath = `${pid}/${t}__${tpl}__idea${ideaIndex}__${Date.now()}.png`;
   const blob = dataUrlToBlob(memeDataUrl);
 
   // 1) Upload to Storage
@@ -70,11 +74,14 @@ export async function uploadMemeAndInsertRow(args: {
     .insert([
       {
         participant_id: participantId,
+        prolific_pid: prolificPid,
+        study_id: studyId,
+        session_id: sessionId,
+        task,
         topic_id: topicId,
         template_id: templateId,
-        ideas,
-        best_idea_index: bestIdeaIndex,
-        best_caption: bestCaption,
+        idea_index: ideaIndex,
+        caption,
         layers,
         image_path: filePath,
         image_url: publicUrl,

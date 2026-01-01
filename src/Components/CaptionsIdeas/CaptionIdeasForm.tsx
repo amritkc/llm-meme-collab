@@ -26,11 +26,13 @@ export default function CaptionIdeasForm({
   bestIdeaIndex,
   onIdeaLayersChange,
   onBestChange,
+  hideBestPicker = false,
 }: {
   ideas: [IdeaState, IdeaState, IdeaState];
   bestIdeaIndex: 0 | 1 | 2;
   onIdeaLayersChange: (idx: 0 | 1 | 2, layers: MemeTextLayer[]) => void;
   onBestChange: (idx: 0 | 1 | 2) => void;
+  hideBestPicker?: boolean;
 }) {
   const getCaptionLayer = (layers: MemeTextLayer[]) =>
     layers.find((l) => l.locked) ?? layers[0];
@@ -58,28 +60,30 @@ export default function CaptionIdeasForm({
 
   return (
     <Stack spacing={2}>
-      <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-        <FormControl>
-          <FormLabel sx={{ fontWeight: 800 }}>Pick the best idea</FormLabel>
-          <Typography variant="caption" color="text.secondary">
-            The selected idea will appear on the image editor.
-          </Typography>
+      {!hideBestPicker && (
+        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+          <FormControl>
+            <FormLabel sx={{ fontWeight: 800 }}>Pick the best idea</FormLabel>
+            <Typography variant="caption" color="text.secondary">
+              The selected idea will appear on the image editor.
+            </Typography>
 
-          <RadioGroup
-            value={String(bestIdeaIndex)}
-            onChange={(e) => onBestChange(Number(e.target.value) as 0 | 1 | 2)}
-          >
-            {[0, 1, 2].map((i) => (
-              <FormControlLabel
-                key={i}
-                value={String(i)}
-                control={<Radio />}
-                label={`Idea ${i + 1}`}
-              />
-            ))}
-          </RadioGroup>
-        </FormControl>
-      </Paper>
+            <RadioGroup
+              value={String(bestIdeaIndex)}
+              onChange={(e) => onBestChange(Number(e.target.value) as 0 | 1 | 2)}
+            >
+              {[0, 1, 2].map((i) => (
+                <FormControlLabel
+                  key={i}
+                  value={String(i)}
+                  control={<Radio />}
+                  label={`Idea ${i + 1}`}
+                />
+              ))}
+            </RadioGroup>
+          </FormControl>
+        </Paper>
+      )}
 
       {[0, 1, 2].map((i) => {
         const layers = ideas[i].layers;
@@ -98,31 +102,7 @@ export default function CaptionIdeasForm({
               fullWidth
               inputProps={{ maxLength: 140 }}
               helperText={`${(caption?.text ?? "").length}/140 (min 3 chars)`}
-              sx={{ mb: 1.5 }}
             />
-
-            {extras.map((ex) => (
-              <Stack key={ex.id} direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                <TextField
-                  label="Extra text"
-                  value={ex.text}
-                  onChange={(e) => onIdeaLayersChange(i as 0 | 1 | 2, updateExtraText(layers, ex.id, e.target.value))}
-                  fullWidth
-                  inputProps={{ maxLength: 140 }}
-                />
-                <IconButton
-                  onClick={() => onIdeaLayersChange(i as 0 | 1 | 2, removeExtra(layers, ex.id))}
-                  title="Remove extra text"
-                >
-                  <DeleteOutlineIcon />
-                </IconButton>
-              </Stack>
-            ))}
-
-            <Divider sx={{ my: 1 }} />
-            <Button size="small" variant="outlined" onClick={() => onIdeaLayersChange(i as 0 | 1 | 2, addExtra(layers))}>
-              + Add extra text
-            </Button>
           </Paper>
         );
       })}

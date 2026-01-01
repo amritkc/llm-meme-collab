@@ -198,9 +198,8 @@ export default function TaskHumanFirst() {
     const templateOk = !!activeState.selectedTemplateId;
     const captions = activeState.ideas.map(getCaptionText);
     const ideasOk = captions.every((x) => x.length >= 3);
-    const bestOk = captions[activeState.bestIdeaIndex].length >= 3;
-    return templateOk && ideasOk && bestOk;
-  }, [activeState.selectedTemplateId, activeState.ideas, activeState.bestIdeaIndex]);
+    return templateOk && ideasOk;
+  }, [activeState.selectedTemplateId, activeState.ideas]);
 
   // Timer per topic
   useEffect(() => {
@@ -296,7 +295,7 @@ export default function TaskHumanFirst() {
       setToast({
         open: true,
         type: "error",
-        msg: "Select a template, write 3 captions (min 3 chars), and pick the best one.",
+        msg: "Select a template and write 3 captions (min 3 chars each).",
       });
       return;
     }
@@ -308,36 +307,36 @@ export default function TaskHumanFirst() {
 
     setSaving(true);
     try {
-      const memePng = await exportMemePNG({
-        imageUrl: selectedTemplate.imageUrl,
-        layers: activeState.ideas[activeState.bestIdeaIndex].layers,
-        width: 1400,
-      });
+      // Save all 3 ideas separately
+      for (let ideaIndex = 0; ideaIndex < 3; ideaIndex++) {
+        const idea = activeState.ideas[ideaIndex];
+        const caption = getCaptionText(idea);
+        
+        // Generate meme for this idea
+        const memePng = await exportMemePNG({
+          imageUrl: selectedTemplate.imageUrl,
+          layers: idea.layers,
+          width: 1400,
+        });
 
-      updateActiveState({ memePng });
+        // Upload to Supabase
+        await uploadMemeAndInsertRow({
+          bucket: "memes",
+          participantId,
+          prolificPid: session.prolificPid,
+          studyId: session.studyId,
+          sessionId: session.sessionId,
+          task: "human",
+          topicId: activeTask.topicId,
+          templateId: activeState.selectedTemplateId,
+          ideaIndex,
+          caption,
+          layers: idea.layers,
+          memeDataUrl: memePng,
+        });
+      }
 
-      const captions = activeState.ideas.map(getCaptionText);
-      const result = await uploadMemeAndInsertRow({
-        bucket: "memes",
-        participantId,
-        topicId: activeTask.topicId,
-        templateId: activeState.selectedTemplateId,
-        ideas: captions,
-        bestIdeaIndex: activeState.bestIdeaIndex,
-        bestCaption: captions[activeState.bestIdeaIndex] ?? "",
-        layers: {
-          bestLayers: activeState.ideas[activeState.bestIdeaIndex].layers,
-          ideas: activeState.ideas.map((i) => i.layers),
-        },
-        memeDataUrl: memePng,
-      });
-
-      updateActiveState({
-        savedImageUrl: result.publicUrl,
-        savedImagePath: result.filePath,
-      });
-
-      setToast({ open: true, type: "success", msg: "Saved" });
+      setToast({ open: true, type: "success", msg: "All 3 ideas saved!" });
 
       const isLast = activeIndex === tasks.length - 1;
       if (!isLast) {
@@ -346,7 +345,6 @@ export default function TaskHumanFirst() {
         return;
       }
 
-      saveAllToSession();
       nav("/done");
     } catch (err: any) {
       console.error(err);
@@ -430,7 +428,7 @@ export default function TaskHumanFirst() {
             Human-first Meme Task
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Topic {activeIndex + 1} of {tasks.length} • Pick template • Write 3 captions • Choose best • Add extra text boxes
+            Topic {activeIndex + 1} of {tasks.length} • Pick template • Write 3 captions • Select idea to edit • Add extra text boxes
           </Typography>
           <Typography variant="caption" color="text.secondary">
             Participant: <b>{participantId}</b>
@@ -466,13 +464,61 @@ export default function TaskHumanFirst() {
                 <Stack spacing={1.5}>
                   <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center">
                     <Typography variant="subtitle2" fontWeight={800}>Image editor</Typography>
-                    <Stack direction="row" spacing={1}>
-                      <Button variant="outlined" onClick={() => updateActiveState({ selectedTemplateId: null })}>
-                        Change template
-                      </Button>
-                      <Button variant="outlined" onClick={addExtraTextBox}>+ Add text box</Button>
-                    </Stack>
+                    <Button variant="outlined" onClick={() => updateActiveState({ selectedTemplateId: null })}>
+                      Change template
+                    </Button>
                   </Stack>
+                  
+                  {/* Idea Selector */}
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                      Select idea to edit:
+                    </Typography>
+                    <Stack direction="row" spacing={1.5}>
+                      {activeState.ideas.map((idea, idx) => {
+                        const captionText = getCaptionText(idea);
+                        const isSelected = activeState.bestIdeaIndex === idx;
+                        return (
+                          <Card
+                            key={idx}
+                            onClick={() => handleBestChange(idx as 0 | 1 | 2)}
+                            sx={{
+                              flex: 1,
+                              cursor: 'pointer',
+                              border: isSelected ? 2 : 1,
+                              borderColor: isSelected ? 'primary.main' : 'divider',
+                              bgcolor: isSelected ? 'primary.50' : 'background.paper',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                borderColor: 'primary.main',
+                                transform: 'translateY(-2px)',
+                                boxShadow: 2,
+                              },
+                            }}
+                          >
+                            <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                              <Typography variant="caption" fontWeight={800} color="primary">
+                                Idea {idx + 1}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  mt: 0.5,
+                                  fontSize: '0.875rem',
+                                  minHeight: 40,
+                                  color: captionText ? 'text.primary' : 'text.disabled',
+                                  fontStyle: captionText ? 'normal' : 'italic',
+                                }}
+                              >
+                                {captionText || 'No caption yet...'}
+                              </Typography>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </Stack>
+                  </Box>
+
                   <MemeEditor
                     imageUrl={selectedTemplate?.imageUrl ?? null}
                     layers={activeState.ideas[activeState.bestIdeaIndex].layers}
@@ -488,7 +534,7 @@ export default function TaskHumanFirst() {
           <Card sx={{ flex: 1 }}>
             <CardContent>
               <Typography variant="subtitle1" fontWeight={800}>
-                2) Write 3 caption ideas + pick the best
+                2) Write 3 caption ideas
               </Typography>
               <Divider sx={{ my: 1.5 }} />
               <CaptionIdeasForm
@@ -501,6 +547,7 @@ export default function TaskHumanFirst() {
                   updateActiveState({ ideas: nextIdeas });
                 }}
                 onBestChange={handleBestChange}
+                hideBestPicker
               />
             </CardContent>
           </Card>

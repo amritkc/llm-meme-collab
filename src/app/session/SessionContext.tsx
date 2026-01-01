@@ -3,6 +3,9 @@ import type { Condition, Meme, MemeRating, Template, Topic } from "./types";
 
 type SessionState = {
   participantId: string;
+  prolificPid: string | null;
+  studyId: string | null;
+  sessionId: string | null;
   consented: boolean;
   condition: Condition | null;
 
@@ -26,6 +29,18 @@ const SessionCtx = createContext<SessionState | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [participantId] = useState(() => crypto.randomUUID());
+  const [prolificPid] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('PROLIFIC_PID');
+  });
+  const [studyId] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('STUDY_ID');
+  });
+  const [sessionId] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('SESSION_ID');
+  });
   const [consented, setConsented] = useState(false);
   const [condition, setCondition] = useState<Condition | null>(null);
 
@@ -38,6 +53,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<SessionState>(
     () => ({
       participantId,
+      prolificPid,
+      studyId,
+      sessionId,
       consented,
       condition,
       topic,
@@ -53,7 +71,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setMemes,
       addRating: (r) => setRatings((prev) => [...prev.filter(x => x.memeId !== r.memeId), r]),
     }),
-    [participantId, consented, condition, topic, templates, captionIdeas, memes, ratings]
+    [participantId, prolificPid, studyId, sessionId, consented, condition, topic, templates, captionIdeas, memes, ratings]
   );
 
   return <SessionCtx.Provider value={value}>{children}</SessionCtx.Provider>;
