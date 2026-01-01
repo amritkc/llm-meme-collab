@@ -101,10 +101,6 @@ type TopicState = {
   savedImagePath?: string;
 };
 
-function makeId(prefix = "layer") {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-}
-
 function formatMMSS(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -244,49 +240,30 @@ export default function TaskHumanFirst() {
     updateActiveState({ ideas: nextIdeas });
   };
 
-  const addExtraTextBox = () => {
-    const i = activeState.bestIdeaIndex;
-    const curr = activeState.ideas[i].layers;
-    const nextLayers = [
-      ...curr,
-      {
-        id: makeId("extra"),
-        text: "New text",
-        xPct: 15,
-        yPct: 60,
-        fontSize: 32,
-        locked: false,
-      } as any,
-    ];
-    const nextIdeas = activeState.ideas.map((idea, idx) =>
-      idx === i ? { ...idea, layers: nextLayers } : idea
-    ) as [IdeaState, IdeaState, IdeaState];
-    updateActiveState({ ideas: nextIdeas });
-  };
-
-  const saveAllToSession = () => {
-    const payload = stateByTopic.map((s) => {
-      const captions = s.ideas.map(getCaptionText);
-      return {
-        participantId,
-        topicId: s.topicId,
-        templateId: s.selectedTemplateId,
-        captions,
-        bestIdeaIndex: s.bestIdeaIndex,
-        bestCaption: captions[s.bestIdeaIndex] ?? "",
-        layers: {
-          bestLayers: s.ideas[s.bestIdeaIndex].layers,
-          ideas: s.ideas.map((i) => i.layers),
-        },
-        memePng: s.memePng,
-        savedImageUrl: s.savedImageUrl,
-        savedImagePath: s.savedImagePath,
-      };
-    });
-
-    (session as any).setHumanFirstResults?.(payload);
-    session.setCaptionIdeas?.(payload.flatMap((p: any) => p.captions));
-  };
+  // Commented out unused function - may be needed for session state in future
+  // const saveAllToSession = () => {
+  //   const payload = stateByTopic.map((s) => {
+  //     const captions = s.ideas.map(getCaptionText);
+  //     return {
+  //       participantId,
+  //       topicId: s.topicId,
+  //       templateId: s.selectedTemplateId,
+  //       captions,
+  //       bestIdeaIndex: s.bestIdeaIndex,
+  //       bestCaption: captions[s.bestIdeaIndex] ?? "",
+  //       layers: {
+  //         bestLayers: s.ideas[s.bestIdeaIndex].layers,
+  //         ideas: s.ideas.map((i) => i.layers),
+  //       },
+  //       memePng: s.memePng,
+  //       savedImageUrl: s.savedImageUrl,
+  //       savedImagePath: s.savedImagePath,
+  //     };
+  //   });
+  //
+  //   (session as any).setHumanFirstResults?.(payload);
+  //   session.setCaptionIdeas?.(payload.flatMap((p: any) => p.captions));
+  // };
 
   const goNext = async () => {
     if (saving) return;

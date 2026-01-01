@@ -56,14 +56,6 @@ export default function MemeEditor({
     onLayersChange(layers.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   };
 
-  const deleteLayer = (id: string) => {
-    const layer = layers.find((l) => l.id === id);
-    if (layer?.locked) return; // best caption protected
-    const next = layers.filter((l) => l.id !== id);
-    onLayersChange(next);
-    setActiveLayerId(next[0]?.id ?? "");
-  };
-
   const onPointerDown = (e: React.PointerEvent, layerId: string) => {
     if (disabled) return;
     const el = containerRef.current;

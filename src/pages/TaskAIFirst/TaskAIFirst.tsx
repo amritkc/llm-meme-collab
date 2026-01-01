@@ -468,11 +468,14 @@ export default function TaskAIFirst() {
       const result = await uploadMemeAndInsertRow({
         bucket: "memes",
         participantId,
+        prolificPid: session.prolificPid,
+        studyId: session.studyId,
+        sessionId: session.sessionId,
+        task: "ai-first",
         topicId: activeTask.topicId,
         templateId: selectedAiMeme.templateId,
-        ideas: activeState.aiMemes.map((m) => m.caption),
-        bestIdeaIndex: activeState.aiMemes.findIndex((m) => m.id === selectedAiMeme.id),
-        bestCaption: selectedAiMeme.caption ?? "",
+        ideaIndex: activeState.aiMemes.findIndex((m) => m.id === selectedAiMeme.id),
+        caption: selectedAiMeme.caption ?? "",
         layers: selectedAiMeme.layers,
         memeDataUrl: memePng,
       });

@@ -13,10 +13,6 @@ import type { MemeTextLayer } from "../MemeEditor/MemeEditor";
 
 type IdeaState = { layers: MemeTextLayer[] };
 
-function makeId(prefix = "extra") {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-}
-
 export default function CaptionIdeasForm({
   ideas,
   bestIdeaIndex,
