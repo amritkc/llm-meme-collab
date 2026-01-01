@@ -747,20 +747,30 @@ export default function TaskAIFirst() {
                   AI analyzes 4 templates, picks the best one, and generates 3 different captions for it.
                 </Typography>
                 {activeState.generating && <LinearProgress sx={{ mt: 1 }} />}
+                
+                {/* Show retry button if AI failed or returned empty memes */}
+                {!activeState.generating && activeState.retryCount > 0 && !activeState.aiMemes.some(m => m.caption) && (
+                  <Alert 
+                    severity="error" 
+                    action={
+                      <Button 
+                        color="inherit" 
+                        size="small" 
+                        variant="outlined"
+                        onClick={() => runAiForTopic()}
+                      >
+                        Retry
+                      </Button>
+                    }
+                  >
+                    AI failed to generate memes. Click Retry to try again.
+                  </Alert>
+                )}
               </Stack>
 
               <Stack spacing={1.5}>
-                {!activeState.aiMemes.length && !activeState.generating && (
+                {!activeState.aiMemes.length && (
                   <Alert severity="info">Generating AI memes...</Alert>
-                )}
-                {!activeState.aiMemes.length && activeState.retryCount > 0 && !activeState.generating && (
-                  <Alert severity="warning" action={
-                    <Button color="inherit" size="small" onClick={() => runAiForTopic()}>
-                      Retry
-                    </Button>
-                  }>
-                    AI generation failed. Click Retry to try again.
-                  </Alert>
                 )}
                 {activeState.aiMemes.map((meme) => {
                   const template = templates.find((t) => t.id === meme.templateId);
