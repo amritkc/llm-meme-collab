@@ -14,10 +14,17 @@ import {
   Tooltip,
   Paper,
   Chip,
+  Container,
+  alpha,
+  useTheme,
 } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import EditIcon from "@mui/icons-material/Edit";
+import ImageIcon from "@mui/icons-material/Image";
+import CreateIcon from "@mui/icons-material/Create";
 
 import { useSession } from "../../app/session/SessionContext";
+import LoadingOverlay from "../../Components/Layout/LoadingOverlay";
 import TemplateSelector, { type MemeTemplate } from "../../Components/Templates/TemplateSelector";
 import CaptionIdeasForm from "../../Components/CaptionsIdeas/CaptionIdeasForm";
 import MemeEditor, { type MemeTextLayer } from "../../Components/MemeEditor/MemeEditor";
@@ -111,6 +118,7 @@ function formatMMSS(totalSeconds: number) {
 export default function TaskHumanFirst() {
   const nav = useNavigate();
   const session = useSession();
+  const theme = useTheme();
 
   const participantId =
     (session as any).participantId ||
@@ -345,7 +353,44 @@ export default function TaskHumanFirst() {
   const isLowTime = secondsLeft <= 10;
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, md: 3 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
+      {/* Header with gradient */}
+      <Paper
+        elevation={0}
+        sx={{
+          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+          color: "white",
+          p: 3,
+          mb: 3,
+          borderRadius: 3,
+        }}
+      >
+        <Stack spacing={1}>
+          <Typography variant="h4" fontWeight={800}>
+            Human-first Meme Task
+          </Typography>
+          <Typography variant="body1" sx={{ opacity: 0.95 }}>
+            Topic {activeIndex + 1} of {tasks.length} • Pick template • Write 3 captions • Select idea to edit • Add extra text boxes
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.85 }}>
+            Participant: <b>{participantId}</b>
+          </Typography>
+        </Stack>
+        <LinearProgress
+          variant="determinate"
+          value={(activeIndex / tasks.length) * 100}
+          sx={{
+            mt: 2,
+            height: 6,
+            borderRadius: 3,
+            bgcolor: alpha("#fff", 0.2),
+            "& .MuiLinearProgress-bar": {
+              bgcolor: "#fff",
+            },
+          }}
+        />
+      </Paper>
+
       {/* ✅ Fixed timer widget (top-right) */}
       <Tooltip
         arrow
@@ -400,21 +445,15 @@ export default function TaskHumanFirst() {
         </Paper>
       </Tooltip>
 
-      <Stack spacing={2}>
-        <Stack spacing={0.5}>
-          <Typography variant="h5" fontWeight={800}>
-            Human-first Meme Task
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Topic {activeIndex + 1} of {tasks.length} • Pick template • Write 3 captions • Select idea to edit • Add extra text boxes
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Participant: <b>{participantId}</b>
-          </Typography>
-        </Stack>
-
-        {/* Topic */}
-        <Card>
+      <Stack spacing={3}>
+        {/* Topic Card */}
+        <Card
+          elevation={3}
+          sx={{
+            borderRadius: 3,
+            background: `linear-gradient(to right, ${alpha(theme.palette.info.main, 0.05)}, ${alpha(theme.palette.primary.main, 0.05)})`,
+          }}
+        >
           <CardContent>
             <Typography variant="h6" fontWeight={800}>
               {activeTask.title}
@@ -425,13 +464,23 @@ export default function TaskHumanFirst() {
           </CardContent>
         </Card>
 
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="stretch">
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={800}>
-                1) Choose a template
-              </Typography>
-              <Divider sx={{ my: 1.5 }} />
+        <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems="stretch">
+          <Card
+            elevation={3}
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              background: alpha(theme.palette.background.paper, 1),
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                <ImageIcon sx={{ color: "primary.main", fontSize: 24 }} />
+                <Typography variant="h6" fontWeight={800}>
+                  1) Choose a template
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
               {!selectedTemplate ? (
                 <TemplateSelector
                   templates={activeTemplates}
@@ -449,7 +498,7 @@ export default function TaskHumanFirst() {
                   
                   {/* Idea Selector */}
                   <Box>
-                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
+                    <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
                       Select idea to edit:
                     </Typography>
                     <Stack direction="row" spacing={1.5}>
@@ -460,17 +509,20 @@ export default function TaskHumanFirst() {
                           <Card
                             key={idx}
                             onClick={() => handleBestChange(idx as 0 | 1 | 2)}
+                            elevation={isSelected ? 4 : 1}
                             sx={{
                               flex: 1,
                               cursor: 'pointer',
-                              border: isSelected ? 2 : 1,
-                              borderColor: isSelected ? 'primary.main' : 'divider',
-                              bgcolor: isSelected ? 'primary.50' : 'background.paper',
-                              transition: 'all 0.2s',
+                              border: 2,
+                              borderColor: isSelected ? 'primary.main' : 'transparent',
+                              bgcolor: isSelected ? alpha(theme.palette.primary.main, 0.08) : 'background.paper',
+                              borderRadius: 2,
+                              transition: 'all 0.3s ease',
                               '&:hover': {
                                 borderColor: 'primary.main',
-                                transform: 'translateY(-2px)',
-                                boxShadow: 2,
+                                transform: 'translateY(-4px)',
+                                boxShadow: 4,
+                                bgcolor: alpha(theme.palette.primary.main, 0.05),
                               },
                             }}
                           >
@@ -509,12 +561,22 @@ export default function TaskHumanFirst() {
             </CardContent>
           </Card>
 
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={800}>
-                2) Write 3 caption ideas
-              </Typography>
-              <Divider sx={{ my: 1.5 }} />
+          <Card
+            elevation={3}
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              background: alpha(theme.palette.background.paper, 1),
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                <EditIcon sx={{ color: "primary.main", fontSize: 24 }} />
+                <Typography variant="h6" fontWeight={800}>
+                  2) Write 3 caption ideas
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
               <CaptionIdeasForm
                 ideas={activeState.ideas}
                 bestIdeaIndex={activeState.bestIdeaIndex}
@@ -551,19 +613,47 @@ export default function TaskHumanFirst() {
           </CardContent>
         </Card> */}
 
-        <Stack direction="row" spacing={1} justifyContent="space-between">
-          <Button variant="outlined" onClick={goPrev} disabled={activeIndex === 0 || saving}>
-            Back
-          </Button>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            background: alpha(theme.palette.background.paper, 1),
+          }}
+        >
+          <Stack direction="row" spacing={2} justifyContent="space-between">
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={goPrev}
+              disabled={activeIndex === 0 || saving}
+              sx={{ px: 4, borderRadius: 2 }}
+            >
+              Back
+            </Button>
 
-          <Button variant="contained" onClick={goNext} disabled={!canContinue || saving}>
-            {saving
-              ? "Saving..."
-              : activeIndex === tasks.length - 1
-              ? "Finish → Done"
-              : "Save & Next Topic"}
-          </Button>
-        </Stack>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={goNext}
+              disabled={!canContinue || saving}
+              sx={{
+                px: 4,
+                borderRadius: 2,
+                boxShadow: 3,
+                '&:hover': {
+                  boxShadow: 6,
+                },
+              }}
+            >
+              {saving
+                ? "Saving..."
+                : activeIndex === tasks.length - 1
+                ? "Finish → Done"
+                : "Save & Next Topic"}
+            </Button>
+          </Stack>
+        </Paper>
       </Stack>
 
       <Snackbar
@@ -580,6 +670,12 @@ export default function TaskHumanFirst() {
           {toast.msg}
         </Alert>
       </Snackbar>
-    </Box>
+
+      <LoadingOverlay
+        open={saving}
+        message="Saving your memes..."
+        subtitle="Please wait while we upload all 3 ideas"
+      />
+    </Container>
   );
 }

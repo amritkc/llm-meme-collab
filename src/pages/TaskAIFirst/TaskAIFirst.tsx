@@ -9,6 +9,7 @@ import {
   CardContent,
   CardMedia,
   Chip,
+  Container,
   Divider,
   LinearProgress,
   Paper,
@@ -16,10 +17,15 @@ import {
   Stack,
   Tooltip,
   Typography,
+  alpha,
+  useTheme,
 } from "@mui/material";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import EditIcon from "@mui/icons-material/Edit";
 
 import { useSession } from "../../app/session/SessionContext";
+import LoadingOverlay from "../../Components/Layout/LoadingOverlay";
 import { exportMemePNG } from "../../Components/MemeEditor/exportMeme";
 import MemeEditor, { type MemeTextLayer } from "../../Components/MemeEditor/MemeEditor";
 import { uploadMemeAndInsertRow } from "../../lib/memeUpload";
@@ -154,27 +160,281 @@ async function imageUrlToBase64(url: string): Promise<string> {
   });
 }
 
+// First API call: AI selects the best template
+async function selectBestTemplate(args: {
+  topicTitle: string;
+  topicDescription: string;
+  templates: MemeTemplate[];
+}): Promise<string> {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+  if (!apiKey) throw new Error("Missing VITE_OPENAI_API_KEY.");
+
+  const baseUrl = (import.meta.env.VITE_OPENAI_BASE_URL as string | undefined) ?? "https://api.openai.com/v1";
+  const url = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  // Convert all template images to base64
+  const templateImagesBase64 = await Promise.all(
+    args.templates.map(async (t) => ({
+      id: t.id,
+      title: t.title,
+      base64: await imageUrlToBase64(t.imageUrl),
+    }))
+  );
+
+  // Build message content with all 4 images
+  const userContent: any[] = [
+    {
+      type: "text",
+      text: [
+        `Topic: ${args.topicTitle} - ${args.topicDescription}`,
+        "",
+        "I'm showing you 4 meme templates below. Each image is labeled with its ID and title.",
+        "Analyze ALL 4 images and determine which template BEST fits this topic based on:",
+        "  - Visual context and emotion in the image",
+        "  - Meme format compatibility",
+        "  - Relevance to the topic",
+        "",
+        "Return ONLY valid JSON in this exact format:",
+        '{"selectedTemplateId":"<id>"}',
+        "",
+        "Return ONLY the JSON, no explanation or markdown.",
+      ].join("\n"),
+    },
+  ];
+
+  // Add each template image
+  templateImagesBase64.forEach((img) => {
+    userContent.push({
+      type: "text",
+      text: `\n--- Template ID: ${img.id} | Title: ${img.title} ---`,
+    });
+    userContent.push({
+      type: "image_url",
+      image_url: {
+        url: img.base64,
+        detail: "low",
+      },
+    });
+  });
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      max_tokens: 100,
+      messages: [
+        {
+          role: "system",
+          content: "You are a meme expert. You analyze meme template images and select the most appropriate one for a given topic.",
+        },
+        {
+          role: "user",
+          content: userContent,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error?.message ?? `OpenAI request failed (${res.status})`);
+  }
+
+  const data = await res.json();
+  let content = data?.choices?.[0]?.message?.content ?? "";
+  
+  console.log("🎯 Template Selection Response:", content);
+  
+  if (!content) return args.templates[0].id;
+
+  // Strip markdown code fences
+  content = content.trim();
+  if (content.startsWith("```")) {
+    content = content.replace(/^```(?:json)?\s*\n?/, "");
+    content = content.replace(/\n?```\s*$/, "");
+    content = content.trim();
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    const selectedId = parsed?.selectedTemplateId;
+    if (selectedId && args.templates.some(t => t.id === selectedId)) {
+      console.log("✅ AI selected template:", selectedId);
+      return selectedId;
+    }
+  } catch (e) {
+    console.error("❌ Template selection parse error:", e);
+  }
+
+  // Fallback to first template
+  return args.templates[0].id;
+}
+
+// Second API call: Generate 3 captions for the selected template
+async function generateCaptionsForTemplate(args: {
+  prompt: string;
+  topicTitle: string;
+  topicDescription: string;
+  template: MemeTemplate;
+}): Promise<string[]> {
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+  if (!apiKey) throw new Error("Missing VITE_OPENAI_API_KEY.");
+
+  const baseUrl = (import.meta.env.VITE_OPENAI_BASE_URL as string | undefined) ?? "https://api.openai.com/v1";
+  const url = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
+
+  // Convert selected template to base64
+  const templateBase64 = await imageUrlToBase64(args.template.imageUrl);
+
+  const userContent: any[] = [
+    {
+      type: "text",
+      text: [
+        `Topic: ${args.topicTitle} - ${args.topicDescription}`,
+        `User prompt: ${args.prompt}`,
+        "",
+        "This is the selected meme template:",
+      ].join("\n"),
+    },
+    {
+      type: "image_url",
+      image_url: {
+        url: templateBase64,
+        detail: "low",
+      },
+    },
+    {
+      type: "text",
+      text: [
+        "",
+        "Generate 3 DIFFERENT creative and funny captions for this template.",
+        "",
+        "Return ONLY valid JSON in this exact format:",
+        '{"captions":["caption 1","caption 2","caption 3"]}',
+        "",
+        "Requirements:",
+        "- Each caption must be unique, funny, and under 120 characters",
+        "- Return ONLY the JSON, no explanation or markdown",
+      ].join("\n"),
+    },
+  ];
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      temperature: 0.9,
+      max_tokens: 300,
+      messages: [
+        {
+          role: "system",
+          content: "You are a meme expert. You create funny, relatable captions for meme templates.",
+        },
+        {
+          role: "user",
+          content: userContent,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.error?.message ?? `OpenAI request failed (${res.status})`);
+  }
+
+  const data = await res.json();
+  let content = data?.choices?.[0]?.message?.content ?? "";
+  
+  console.log("💬 Caption Generation Response:", content);
+  
+  if (!content) return [];
+
+  // Strip markdown code fences
+  content = content.trim();
+  if (content.startsWith("```")) {
+    content = content.replace(/^```(?:json)?\s*\n?/, "");
+    content = content.replace(/\n?```\s*$/, "");
+    content = content.trim();
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed?.captions)) {
+      console.log("✅ Generated captions:", parsed.captions);
+      return parsed.captions.slice(0, 3);
+    }
+  } catch (e) {
+    console.error("❌ Caption parse error:", e);
+  }
+
+  return [];
+}
+
+async function generateAiMemes(args: {
+  prompt: string;
+  topicTitle: string;
+  topicDescription: string;
+  templates: MemeTemplate[];
+}) {
+  // Step 1: AI selects the best template from all 4
+  console.log("🚀 Step 1: Asking AI to select best template...");
+  const selectedTemplateId = await selectBestTemplate({
+    topicTitle: args.topicTitle,
+    topicDescription: args.topicDescription,
+    templates: args.templates,
+  });
+
+  const selectedTemplate = args.templates.find(t => t.id === selectedTemplateId);
+  if (!selectedTemplate) {
+    throw new Error("Selected template not found");
+  }
+
+  // Step 2: Generate 3 captions for the selected template
+  console.log("🚀 Step 2: Generating 3 captions for selected template...");
+  const captions = await generateCaptionsForTemplate({
+    prompt: args.prompt,
+    topicTitle: args.topicTitle,
+    topicDescription: args.topicDescription,
+    template: selectedTemplate,
+  });
+
+  // Return in the expected format
+  return captions.map(caption => ({
+    templateId: selectedTemplateId,
+    caption: caption.trim(),
+  }));
+}
+
 function normalizeAiMemes(
   input: Array<{ templateId?: string; caption?: string }>,
   templates: MemeTemplate[]
 ) {
   const byId = new Map(templates.map((t) => [t.id, t]));
   
-  // AI should select ONE template and provide 3 captions for it
-  // Use the templateId from first item (AI's selected template)
+  // All captions should use the same templateId (from AI selection)
   const selectedTemplateId = input[0]?.templateId && byId.has(input[0].templateId) 
     ? input[0].templateId 
     : templates[0]?.id;
 
-  // Map captions - keep them even if empty, we'll validate later
+  // Map captions
   const safe = input
-    .slice(0, 3)  // Take first 3 from AI response
+    .slice(0, 3)
     .map((m) => ({
-      templateId: selectedTemplateId,  // All use the SAME template
+      templateId: selectedTemplateId,
       caption: (m.caption ?? "").trim(),
     }));
 
-  // Ensure we have exactly 3 captions (pad if needed)
+  // Ensure we have exactly 3 captions
   while (safe.length < 3) {
     safe.push({ templateId: selectedTemplateId as string, caption: "" });
   }
@@ -190,7 +450,9 @@ function normalizeAiMemes(
   };
 }
 
-async function generateAiMemes(args: {
+// OLD IMPLEMENTATION - Commented out for build
+// Removed old generateAiMemes - now replaced with two-step process above
+/* async function generateAiMemes_OLD(args: {
   prompt: string;
   topicTitle: string;
   topicDescription: string;
@@ -283,11 +545,21 @@ async function generateAiMemes(args: {
   }
 
   const data = await res.json();
-  const content = data?.choices?.[0]?.message?.content ?? "";
+  let content = data?.choices?.[0]?.message?.content ?? "";
   
   console.log("🤖 AI Response content:", content);
   
   if (!content) return [];
+
+  // Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+  content = content.trim();
+  if (content.startsWith("```")) {
+    // Remove opening fence (e.g., ```json or ```)
+    content = content.replace(/^```(?:json)?\s*\n?/, "");
+    // Remove closing fence
+    content = content.replace(/\n?```\s*$/, "");
+    content = content.trim();
+  }
 
   try {
     const parsed = JSON.parse(content);
@@ -301,10 +573,12 @@ async function generateAiMemes(args: {
 
   return [];
 }
+*/
 
 export default function TaskAIFirst() {
   const nav = useNavigate();
   const session = useSession();
+  const theme = useTheme();
 
   const participantId =
     (session as any).participantId ||
@@ -646,7 +920,47 @@ export default function TaskAIFirst() {
   const isLowTime = secondsLeft <= 10;
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: "auto", p: { xs: 2, md: 3 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
+      {/* Header with gradient */}
+      <Paper
+        elevation={0}
+        sx={{
+          background: `linear-gradient(135deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.dark} 100%)`,
+          color: "white",
+          p: 3,
+          mb: 3,
+          borderRadius: 3,
+        }}
+      >
+        <Stack spacing={1}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <AutoAwesomeIcon sx={{ fontSize: 32 }} />
+            <Typography variant="h4" fontWeight={800}>
+              AI-first Meme Task
+            </Typography>
+          </Stack>
+          <Typography variant="body1" sx={{ opacity: 0.95 }}>
+            Topic {activeIndex + 1} of {tasks.length} • AI selects best template & generates 3 captions • pick one • refine it
+          </Typography>
+          <Typography variant="caption" sx={{ opacity: 0.85 }}>
+            Participant: <b>{participantId}</b>
+          </Typography>
+        </Stack>
+        <LinearProgress
+          variant="determinate"
+          value={(activeIndex / tasks.length) * 100}
+          sx={{
+            mt: 2,
+            height: 6,
+            borderRadius: 3,
+            bgcolor: alpha("#fff", 0.2),
+            "& .MuiLinearProgress-bar": {
+              bgcolor: "#fff",
+            },
+          }}
+        />
+      </Paper>
+
       <Tooltip
         arrow
         placement="left"
@@ -700,37 +1014,59 @@ export default function TaskAIFirst() {
         </Paper>
       </Tooltip>
 
-      <Stack spacing={2}>
-        <Stack spacing={0.5}>
-          <Typography variant="h5" fontWeight={800}>
-            AI-first Meme Task
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Topic {activeIndex + 1} of {tasks.length} - AI selects best template & generates 3 captions - pick one - refine it
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Participant: <b>{participantId}</b>
-          </Typography>
-        </Stack>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6" fontWeight={800}>
-              {activeTask.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {activeTask.description}
-            </Typography>
+      <Stack spacing={3}>
+        {/* Topic Card */}
+        <Card
+          elevation={3}
+          sx={{
+            borderRadius: 3,
+            background: `linear-gradient(to right, ${alpha(theme.palette.secondary.main, 0.05)}, ${alpha(theme.palette.info.main, 0.05)})`,
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AutoAwesomeIcon sx={{ color: "secondary.main", fontSize: 28 }} />
+              </Box>
+              <Box>
+                <Typography variant="h5" fontWeight={800}>
+                  {activeTask.title}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {activeTask.description}
+                </Typography>
+              </Box>
+            </Stack>
           </CardContent>
         </Card>
 
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems="stretch">
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={800}>
-                1) AI-generated memes (pick one)
-              </Typography>
-              <Divider sx={{ my: 1.5 }} />
+        <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems="stretch">
+          <Card
+            elevation={3}
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              background: alpha(theme.palette.background.paper, 1),
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                <AutoAwesomeIcon sx={{ color: "secondary.main", fontSize: 24 }} />
+                <Typography variant="h6" fontWeight={800}>
+                  1) AI-generated memes (pick one)
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
 
               <Stack spacing={1.5} sx={{ mb: 2 }}>
                 {/* <TextField
@@ -777,10 +1113,18 @@ export default function TaskAIFirst() {
                   return (
                     <Card
                       key={meme.id}
-                      variant="outlined"
+                      elevation={selected ? 4 : 1}
                       sx={{
-                        borderColor: selected ? "primary.main" : "divider",
-                        borderWidth: selected ? 2 : 1,
+                        border: 2,
+                        borderColor: selected ? "secondary.main" : "transparent",
+                        borderRadius: 2,
+                        bgcolor: selected ? alpha(theme.palette.secondary.main, 0.08) : "background.paper",
+                        transition: "all 0.3s ease",
+                        "&:hover": {
+                          borderColor: "secondary.main",
+                          transform: "translateY(-4px)",
+                          boxShadow: 4,
+                        },
                       }}
                     >
                       <CardActionArea onClick={() => updateActiveState({ selectedAiId: meme.id })}>
@@ -809,12 +1153,22 @@ export default function TaskAIFirst() {
             </CardContent>
           </Card>
 
-          <Card sx={{ flex: 1 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={800}>
-                2) Enhance the selected meme
-              </Typography>
-              <Divider sx={{ my: 1.5 }} />
+          <Card
+            elevation={3}
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              background: alpha(theme.palette.background.paper, 1),
+            }}
+          >
+            <CardContent sx={{ p: 3 }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+                <EditIcon sx={{ color: "secondary.main", fontSize: 24 }} />
+                <Typography variant="h6" fontWeight={800}>
+                  2) Enhance the selected meme
+                </Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
 
               {!selectedAiMeme ? (
                 <Alert severity="info">Select one of the AI memes to edit.</Alert>
@@ -850,19 +1204,47 @@ export default function TaskAIFirst() {
           </Card>
         </Stack>
 
-        <Stack direction="row" spacing={1} justifyContent="space-between">
-          <Button variant="outlined" onClick={goPrev} disabled={activeIndex === 0 || saving}>
-            Back
-          </Button>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            background: alpha(theme.palette.background.paper, 1),
+          }}
+        >
+          <Stack direction="row" spacing={2} justifyContent="space-between">
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={goPrev}
+              disabled={activeIndex === 0 || saving}
+              sx={{ px: 4, borderRadius: 2 }}
+            >
+              Back
+            </Button>
 
-          <Button variant="contained" onClick={goNext} disabled={!canContinue || saving}>
-            {saving
-              ? "Saving..."
-              : activeIndex === tasks.length - 1
-              ? "Finish - Done"
-              : "Save & Next Topic"}
-          </Button>
-        </Stack>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={goNext}
+              disabled={!canContinue || saving}
+              sx={{
+                px: 4,
+                borderRadius: 2,
+                boxShadow: 3,
+                "&:hover": {
+                  boxShadow: 6,
+                },
+              }}
+            >
+              {saving
+                ? "Saving..."
+                : activeIndex === tasks.length - 1
+                ? "Finish - Done"
+                : "Save & Next Topic"}
+            </Button>
+          </Stack>
+        </Paper>
       </Stack>
 
       <Snackbar
@@ -879,6 +1261,12 @@ export default function TaskAIFirst() {
           {toast.msg}
         </Alert>
       </Snackbar>
-    </Box>
+
+      <LoadingOverlay
+        open={saving}
+        message="Saving your meme..."
+        subtitle="Please wait while we upload your creation"
+      />
+    </Container>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import SmartToyIcon from "@mui/icons-material/SmartToy";
 import PersonIcon from "@mui/icons-material/Person";
+import RateReviewIcon from "@mui/icons-material/RateReview";
 
 export default function Home() {
   const nav = useNavigate();
@@ -164,6 +165,57 @@ export default function Home() {
               </CardActionArea>
             </Card>
           </Stack>
+
+          <Divider sx={{ width: "100%", my: 3 }} />
+
+          {/* Review Section */}
+          <Card
+            sx={{
+              width: "100%",
+              maxWidth: 600,
+              transition: "all 0.3s",
+              "&:hover": {
+                transform: "translateY(-8px)",
+                boxShadow: 6,
+              },
+            }}
+          >
+            <CardActionArea onClick={() => nav("/review")}>
+              <CardContent sx={{ p: 4 }}>
+                <Stack spacing={2} alignItems="center" textAlign="center">
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      bgcolor: "info.main",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <RateReviewIcon sx={{ fontSize: 48, color: "white" }} />
+                  </Box>
+                  <Typography variant="h5" fontWeight={800}>
+                    Review Memes
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    View and rate all the memes that have been created in the study.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    color="info"
+                    sx={{ mt: 2 }}
+                    onClick={() => nav("/review")}
+                  >
+                    Go to Review
+                  </Button>
+                </Stack>
+              </CardContent>
+            </CardActionArea>
+          </Card>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 4, textAlign: "center" }}>
             Both workflows involve creating memes for 3 topics: School, Football, and Work/Office
