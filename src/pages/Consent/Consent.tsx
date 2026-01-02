@@ -157,7 +157,7 @@ const ConsentForm = () => {
             <Typography variant="body2" color="text.secondary">
               After providing consent, you will interact with a meme generation and
               rating interface and answer short follow-up questions. The study takes
-              approximately <strong>30 minutes</strong>.
+              approximately <strong>15 minutes</strong>.
             </Typography>
           </CardContent>
         </Card>
@@ -169,8 +169,8 @@ const ConsentForm = () => {
               Voluntary Participation
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Participation is voluntary. You may withdraw at any time without penalty
-              or loss of compensation.
+              Participation is voluntary. You may withdraw from the study at any time without penalty. 
+              Compensation is provided only for completed submissions, in accordance with Prolific’s payment guidelines.
             </Typography>
           </CardContent>
         </Card>
