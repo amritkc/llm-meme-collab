@@ -102,8 +102,8 @@ const ConsentForm = () => {
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="body1" paragraph>
-              You are invited to participate in an online research study titled
-              <strong> "LLMeme"</strong>, conducted by Amrit Khadka, Kaivalya Vanguri, 
+              You are invited to participate in an online research study of an
+              <strong> "LLMeme Rater"</strong>, conducted by Amrit Khadka, Kaivalya Vanguri, 
               Lavanya Raghavendra Rao, Sebastian Feldkamp and supervised by researchers 
               at TU Darmstadt.
             </Typography>
