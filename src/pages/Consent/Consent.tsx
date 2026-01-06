@@ -169,12 +169,29 @@ const ConsentForm = () => {
               Voluntary Participation
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Participation is voluntary. You may withdraw from the study at any time without penalty. 
-              Compensation is provided only for completed submissions, in accordance with Prolific’s payment guidelines.
+              <p>Your participation is voluntary.</p>
+              <p>The online study will last approximately 15 minutes.</p>
+              <p>We will record personal demographics (age, gender, etc.) as well as your subjective perception of the system.</p>
+              <p>We may publish our results from this and other sessions, but all such reports will be confidential and will neither include your name nor cannot be associated with your identity.</p>
+              <p>If you have any questions about the whole informed consent process of this research or your rights as a human research subject, please contact us. You should carefully read the settings below. (You may take as much time as you need to read the consent form.)</p>
             </Typography>
           </CardContent>
         </Card>
-
+        <Card elevation={3} sx={{ borderRadius: 3 }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={800} gutterBottom>
+              Procedure
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              <p>After giving consent, you will be guided through the following steps:</p>
+              <ol>
+                <li>Participants generate a set of Memes</li>
+                <li>Participants provide feedback about the process</li>
+              </ol>
+              <p>The complete procedure of this online study will last approximately 15 minutes.</p>
+            </Typography>
+          </CardContent>
+        </Card>
         {/* Risks & Benefits Card */}
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
@@ -193,17 +210,26 @@ const ConsentForm = () => {
         <Card elevation={3} sx={{ borderRadius: 3 }}>
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" fontWeight={800} gutterBottom>
-              Data Protection
+              Data Protection and Confidentiality
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              The study complies with the EU General Data Protection Regulation (GDPR).
-              We collect demographic information (e.g., age, gender), interaction data,
-              and technical metadata (e.g., browser type).
+              <p>The General Data Protection Regulation (GDPR) of the European Union (EU) governs that data collection process. The legal basis for processing the personal data is the consent in accordance with GDPR Art. 6 (1). The GDPR agreneets a set of right to the data subjects, including the right to access, rectification, and erasure of personal data.</p>
+          <ul>
+            <li>You have the right to access your personal data at any time (GDPR Art. 15).</li>
+            <li>You have the right to correct inaccurate personal data at any time (GDPR Art. 16).</li>
+            <li>You have the right to have your personal data deleted (GDPR Art. 17).</li>
+            <li>You have the right to limit the processing of your personal data (GDPR Art. 18).</li>
+            <li>You have the right to have your data transforared to others (GDPR Art. 20).</li>
+            <li>You have the right to withdraw the consent given (GDPR Art. 21).</li>
+            <li>If you wish to exercise any of your rights, please contact the researchers.</li>
+          </ul>  
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Your data will be stored securely, processed only for research purposes,
-              and published only in anonymized form. You may withdraw your consent at
-              any time (GDPR Art. 21).
+              <p>Personal data (age, gender, experience with creative tasks) will be recorded during participation. The contact details of the study participants can be used to track potential infection chains. Researchers will not identify you by your real name in any reports using settings obtained from this online study, and your confidentiality as a participant in this online study will remain secure. Data collected in this online study will be treated in compliance with the GDPR.</p>
+          <p>We will record demographics and browser meta data during the online study. All data you provide in this online study will be published anonymized. Subsequent uses of records and data will be subject to standard data use policies that protect the participating individuals' anonymity. We will remove or code any personal information that could identify you before publishing the data to ensure that no one can identify you from the information we share. We will use current scientific standards and known methods for anonymization. When your data are anonymized, they are altered in a manner that they can no longer be traced back to your person or only with disproportionate technical effort. Despite these measures, we cannot guarantee the anonymity of your personal data. This site uses cookies and other tracking technologies to conduct the research, to improve the user experience, the ability to interact with the system and to provide additional content from third parties. Despite careful control of content, the researchers assume no liability for damages, which directly or indirectly result from the use of this online application.</p>
+          <p>Your non-anonymized data will be stored for six months from the time your consent is given, unless you withdraw your consent before this period has elapsed. Your non-anonymized data will be stored in a secure location and will be accessible only to the researchers involved in this work.</p>
+          <p>Anonymized data collected can be shared publicly. Data collected that have not been made public will be deleted after the end of the research.</p>
+          <p>As with any publication or online-related activity, the risk of a breach of confidentiality is always possible. According to the GDPR, the researchers will inform the participant if a breach of confidential data is detected.</p>
             </Typography>
           </CardContent>
         </Card>
