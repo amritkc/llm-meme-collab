@@ -30,22 +30,22 @@ import MemeEditor, { type MemeTextLayer } from "../../Components/MemeEditor/Meme
 import { exportMemePNG } from "../../Components/MemeEditor/exportMeme";
 import { uploadMemeAndInsertRow } from "../../lib/memeUpload";
 
-// School templates
+// Student Life templates
 import successKid from "../../assets/templates/Success_Kid.jpg";
-import disasterGirl from "../../assets/templates/Disaster_Girl.jpg";
+import theOfficeCongrats from "../../assets/templates/The_Office_Congratulations.jpg";
 import thirdWorldKid from "../../assets/templates/Third_World_Skeptical_Kid.jpg";
 import waitingSkeleton from "../../assets/templates/Waiting_Skeleton.jpg";
 
-// Football templates
+// Technology / AI templates
+import absoluteCinema from "../../assets/templates/Absolute_Cinema.jpg";
+import changeMind from "../../assets/templates/Change_My_Mind.jpg";
+import oneDoesNotSimply from "../../assets/templates/One_Does_Not_Simply.jpg";
+import surprisedPikachu from "../../assets/templates/Surprised_Pikachu.jpg";
+
+// Daily Struggles templates
+import disasterGirl from "../../assets/templates/Disaster_Girl.jpg";
 import laughingLeo from "../../assets/templates/Laughing_Leo.jpg";
 import youGuysGettingPaid from "../../assets/templates/You_Guys_Are_Getting_Paid.jpg";
-import surprisedPikachu from "../../assets/templates/Surprised_Pikachu.jpg";
-import absoluteCinema from "../../assets/templates/Absolute_Cinema.jpg";
-
-// Work/Office templates
-import theOfficeCongrats from "../../assets/templates/The_Office_Congratulations.jpg";
-import oneDoesNotSimply from "../../assets/templates/One_Does_Not_Simply.jpg";
-import changeMind from "../../assets/templates/Change_My_Mind.jpg";
 import scientist from "../../assets/templates/You_know_Im_something_of_a_scientist_myself.jpg";
 
 const TOPIC_SECONDS = 300;
@@ -57,36 +57,36 @@ const FALLBACK_TASKS: {
   templates: MemeTemplate[];
 }[] = [
   {
-    topicId: "school",
-    title: "School",
-    description: "Something relatable about school life.",
+    topicId: "student-life",
+    title: "Student Life",
+    description: "Create a meme about funny or relatable moments from your student experience - like exams, deadlines, or campus life.",
     templates: [
-      { id: "s1", title: "Success Kid", imageUrl: successKid },
-      { id: "s2", title: "Disaster Girl", imageUrl: disasterGirl },
-      { id: "s3", title: "Third World Kid", imageUrl: thirdWorldKid },
-      { id: "s4", title: "Waiting Skeleton", imageUrl: waitingSkeleton },
+      { id: "sl1", title: "Success Kid", imageUrl: successKid },
+      { id: "sl2", title: "Office Congratulations", imageUrl: theOfficeCongrats },
+      { id: "sl3", title: "Third World Kid", imageUrl: thirdWorldKid },
+      { id: "sl4", title: "Waiting Skeleton", imageUrl: waitingSkeleton },
     ],
   },
   {
-    topicId: "football",
-    title: "Playing Football",
-    description: "A meme about football situations.",
+    topicId: "technology-ai",
+    title: "Technology / AI",
+    description: "Make a meme about technology, artificial intelligence, coding, or tech-related situations that people can relate to.",
     templates: [
-      { id: "f1", title: "Laughing Leo", imageUrl: laughingLeo },
-      { id: "f2", title: "Getting Paid", imageUrl: youGuysGettingPaid },
-      { id: "f3", title: "Surprised Pikachu", imageUrl: surprisedPikachu },
-      { id: "f4", title: "Absolute Cinema", imageUrl: absoluteCinema },
+      { id: "ta1", title: "Absolute Cinema", imageUrl: absoluteCinema },
+      { id: "ta2", title: "Change My Mind", imageUrl: changeMind },
+      { id: "ta3", title: "One Does Not Simply", imageUrl: oneDoesNotSimply },
+      { id: "ta4", title: "Surprised Pikachu", imageUrl: surprisedPikachu },
     ],
   },
   {
-    topicId: "work",
-    title: "Work / Office",
-    description: "Relatable office vibes.",
+    topicId: "daily-struggles",
+    title: "Daily Struggles",
+    description: "Create a meme about common everyday challenges, frustrations, or relatable moments from daily life.",
     templates: [
-      { id: "w1", title: "Office Congratulations", imageUrl: theOfficeCongrats },
-      { id: "w2", title: "One Does Not Simply", imageUrl: oneDoesNotSimply },
-      { id: "w3", title: "Change My Mind", imageUrl: changeMind },
-      { id: "w4", title: "Scientist", imageUrl: scientist },
+      { id: "ds1", title: "Disaster Girl", imageUrl: disasterGirl },
+      { id: "ds2", title: "Laughing Leo", imageUrl: laughingLeo },
+      { id: "ds3", title: "Getting Paid", imageUrl: youGuysGettingPaid },
+      { id: "ds4", title: "Scientist", imageUrl: scientist },
     ],
   },
 ];
@@ -307,6 +307,7 @@ export default function TaskHumanFirst() {
         // Upload to Supabase
         await uploadMemeAndInsertRow({
           bucket: "memes",
+          table: "meme_human_submissions",
           participantId,
           prolificPid: session.prolificPid,
           studyId: session.studyId,
@@ -369,10 +370,10 @@ export default function TaskHumanFirst() {
             Human-first Meme Task
           </Typography>
           <Typography variant="body1" sx={{ opacity: 0.95 }}>
-            Topic {activeIndex + 1} of {tasks.length} • Pick template • Write 3 captions • Select idea to edit • Add extra text boxes
+            Topic {activeIndex + 1} of {tasks.length} • Pick template • Write 3 captions • Edit meme
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.85 }}>
-            Participant: <b>{participantId}</b>
+            Participant: <b>{session.prolificPid || participantId}</b>
           </Typography>
         </Stack>
         <LinearProgress
@@ -576,18 +577,55 @@ export default function TaskHumanFirst() {
                 </Typography>
               </Stack>
               <Divider sx={{ mb: 2 }} />
-              <CaptionIdeasForm
-                ideas={activeState.ideas}
-                bestIdeaIndex={activeState.bestIdeaIndex}
-                onIdeaLayersChange={(idx, layers) => {
-                  const nextIdeas = activeState.ideas.map((idea, i) =>
-                    i === idx ? { ...idea, layers } : idea
-                  ) as [IdeaState, IdeaState, IdeaState];
-                  updateActiveState({ ideas: nextIdeas });
-                }}
-                onBestChange={handleBestChange}
-                hideBestPicker
-              />
+              
+              {!selectedTemplate ? (
+                <Box
+                  sx={{
+                    p: 4,
+                    textAlign: 'left',
+                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                    borderRadius: 2,
+                    border: `2px dashed ${alpha(theme.palette.info.main, 0.3)}`,
+                  }}
+                >
+                  <Typography variant="h6" fontWeight={700} color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+                    📝 How to Create Your Meme
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600} color="primary.main" sx={{ mb: 2, bgcolor: alpha(theme.palette.primary.main, 0.1), p: 1.5, borderRadius: 1, textAlign: 'center' }}>
+                    ⏱️ You have 5 minutes to complete this topic
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
+                    <strong>Step 1:</strong> Select a meme template from the left panel that you think works best for <strong>{activeTask.title}</strong>
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
+                    <strong>Step 2:</strong> Write 3 different caption ideas here
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
+                    <strong>Step 3:</strong> Select one idea to customize with the editor (you can change the template later if needed)
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    <strong>Step 4:</strong> Click "Save & Next Topic" - all 3 ideas will be saved!
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 3, textAlign: 'center' }}>
+                    👈 Please select a template to get started
+                  </Typography>
+                </Box>
+              ) : (
+                <CaptionIdeasForm
+                  ideas={activeState.ideas}
+                  bestIdeaIndex={activeState.bestIdeaIndex}
+                  onIdeaLayersChange={(idx, layers) => {
+                    // Automatically switch to the idea being edited
+                    handleBestChange(idx as 0 | 1 | 2);
+                    const nextIdeas = activeState.ideas.map((idea, i) =>
+                      i === idx ? { ...idea, layers } : idea
+                    ) as [IdeaState, IdeaState, IdeaState];
+                    updateActiveState({ ideas: nextIdeas });
+                  }}
+                  onBestChange={handleBestChange}
+                  hideBestPicker
+                />
+              )}
             </CardContent>
           </Card>
         </Stack>

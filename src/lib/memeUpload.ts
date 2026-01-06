@@ -19,6 +19,7 @@ function safePart(s: string) {
  */
 export async function uploadMemeAndInsertRow(args: {
   bucket: string; // "memes"
+  table?: string; // DB table name (defaults to "meme_submissions")
   participantId: string;
   prolificPid: string | null;
   studyId: string | null;
@@ -33,6 +34,7 @@ export async function uploadMemeAndInsertRow(args: {
 }) {
   const {
     bucket,
+    table = "meme_submissions",
     participantId,
     prolificPid,
     studyId,
@@ -70,7 +72,7 @@ export async function uploadMemeAndInsertRow(args: {
 
   // 2) Insert row into DB
   const { data: row, error: insertError } = await supabase
-    .from("meme_submissions")
+    .from(table)
     .insert([
       {
         participant_id: participantId,
