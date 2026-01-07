@@ -357,7 +357,7 @@ export default function TaskAIFirst() {
         
         // Generate meme for this idea
         const memePng = await exportMemePNG({
-          imageUrl: selectedTemplate.imageUrl,
+          imageUrl: selectedTemplate?.imageUrl ?? '',
           layers: idea.layers,
           width: 1400,
         });
@@ -372,7 +372,7 @@ export default function TaskAIFirst() {
           sessionId: session.sessionId,
           task: "ai",
           topicId: activeTask.topicId,
-          templateId: activeState.selectedTemplateId,
+          templateId: activeState.selectedTemplateId ?? '',
           ideaIndex,
           caption: idea.caption,
           layers: idea.layers,

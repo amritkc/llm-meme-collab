@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
-import { imagePathToBase64, getMimeTypeFromExtension } from '../utils/imageToBase64';
+import { imagePathToBase64 } from '../utils/imageToBase64';
 
 // Type definitions
 export interface TemplateInput {

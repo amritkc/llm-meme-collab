@@ -115,7 +115,6 @@ function formatMMSS(totalSeconds: number) {
 }
 
 export default function TaskHumanFirst() {
-  const nav = useNavigate();
   const session = useSession();
   const theme = useTheme();
 
