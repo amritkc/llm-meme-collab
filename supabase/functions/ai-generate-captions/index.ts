@@ -58,14 +58,14 @@ serve(async (req: Request) => {
       );
     }
 
-    const model = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const model = Deno.env.get("OPENAI_MODEL") || "gpt-5-mini";
 
     // Build user message
     let userMessage = `Topic: ${topic}\n\n`;
     if (descriptionOfMemeTemplate) {
       userMessage += `Template Description: ${descriptionOfMemeTemplate}\n\n`;
     }
-    userMessage += `Generate 3 funny, short captions for this meme template about the topic. Make them clever and relatable.`;
+    userMessage += `Generate 3 funny, short captions for this meme template about the topic. Make them clever and relatable. Try to find situations that fit for the topic.`;
 
     // Build content array with text + image
     const content = [

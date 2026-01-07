@@ -41,40 +41,48 @@ async function callEdgeFunction(functionName, requestBody) {
   return await response.json();
 }
 
+// Fixed template for deterministic runs (Laughing_Leo)
+const FIXED_TEMPLATE = {
+  templateId: 'LL',
+  name: 'Laughing_Leo.jpg',
+  path: '../src/assets/templates/daily/Laughing_Leo.jpg',
+  description: "Leonardo DiCaprio laughing (from Django Unchained)",
+};
+
 // Test 1: ai-select-template
 async function testSelectTemplate() {
   console.log('\n' + '='.repeat(70));
   console.log('🧪 TEST 1: ai-select-template');
   console.log('='.repeat(70));
-  console.log('📋 Task: AI selects the best meme template for "Student Life"');
-  console.log('📦 Testing with 4 templates\n');
+  console.log('📋 Task: AI selects the best meme template for "Technology/AI"');
+  console.log('📦 Testing with 4 templates (Technology/AI)\n');
 
   try {
-    // Load the first 4 templates with short descriptions
+    // Load the four Student Life templates with short descriptions
     const templates = [
       {
         templateId: '00',
-        name: 'You_know_Im_something_of_a_scientist_myself.jpg',
-        path: '../src/assets/templates/daily/You_know_Im_something_of_a_scientist_myself.jpg',
-        description: "A man wearing glasses smiling proudly, leaning slightly forward, appearing self-satisfied.",
+        name: 'Success_Kid.jpg',
+        path: '../src/assets/templates/student/Success_Kid.jpg',
+        description: "A small child clenching a fist with a determined, victorious expression while standing on a sandy beach.",
       },
       {
         templateId: '01',
-        name: 'Laughing_Leo.jpg',
-        path: '../src/assets/templates/daily/Laughing_Leo.jpg',
-        description: "A well-dressed man in a suit laughing confidently while holding a drink at a formal party or event.",
+        name: 'The_Office_Congratulations.jpg',
+        path: '../src/assets/templates/student/The_Office_Congratulations.jpg',
+        description: "A man being congratulated by someone for a job well done, even though he did nothing special.",
       },
       {
         templateId: '02',
-        name: 'You_Guys_Are_Getting_Paid.jpg',
-        path: '../src/assets/templates/daily/You_Guys_Are_Getting_Paid.jpg',
-        description: "A man with a confused and annoyed expression, appearing surprised or incredulous.",
+        name: 'Third_World_Skeptical_Kid.jpg',
+        path: '../src/assets/templates/student/Third_World_Skeptical_Kid.jpg',
+        description: "A young child giving someone a skeptical side-eye look, appearing doubtful or suspicious.",
       },
       {
         templateId: '03',
-        name: 'Disaster_Girl.jpg',
-        path: '../src/assets/templates/daily/Disaster_Girl.jpg',
-        description: " Dont choose this meme for now.",
+        name: 'Waiting_Skeleton.jpg',
+        path: '../src/assets/templates/student/Waiting_Skeleton.jpg',
+        description: "A skeleton sitting or leaning forward with its head resting on its hand, appearing tired and bored while waiting.",
       },
     ];
 
@@ -93,7 +101,7 @@ async function testSelectTemplate() {
     const requestBody = {
       topic: 'Student Life',
       templates: templatesWithBase64,
-    };
+    }; 
 
     console.log('\n📤 Calling ai-select-template...');
     const startTime = Date.now();
@@ -126,59 +134,34 @@ async function testSelectTemplate() {
   }
 }
 
-// Test 2: ai-generate-captions
-async function testGenerateCaptions(selectedTemplateData) {
-  console.log('\n' + '='.repeat(70));
-  console.log('🧪 TEST 2: ai-generate-captions');
-  console.log('='.repeat(70));
-  console.log('📋 Task: AI generates 3 funny captions for "Student Life"');
-  
-  if (!selectedTemplateData || !selectedTemplateData.success) {
-    console.log('❌ Using default template (Test 1 failed)\n');
-    selectedTemplateData = { selectedTemplateId: '00', selectedTemplateName: 'Default' };
-  } else {
-    console.log(`📦 Using template selected by AI in Test 1: ${selectedTemplateData.selectedTemplateName}\n`);
-  }
-
+// Test 2: ai-generate-captions (simplified output)
+async function testGenerateCaptions(selectedTemplate, runLabel) {
   try {
-    // Find the selected template from Test 1
-    const selectedTemplate = selectedTemplateData.allTemplates?.find(t => t.templateId === selectedTemplateData.selectedTemplateId);
-    const templatePath = selectedTemplate?.path || '../src/assets/templates/daily/Disaster_Girl.jpg';
+    const templatePath = selectedTemplate?.path || '../src/assets/templates/daily/Laughing_Leo.jpg';
     const base64Image = loadImageAsBase64(templatePath);
-    
-    console.log(`✅ Loaded template: ${selectedTemplate?.name || 'Unknown'}`);
-    console.log(`📦 Size: ${(base64Image.length / 1024).toFixed(2)} KB\n`);
 
     const requestBody = {
       topic: 'Student Life',
       templateBase64: base64Image,
       templateMimeType: 'image/jpeg',
-      descriptionOfMemeTemplate: selectedTemplate?.description || 'Template selected by AI',
-    };
+      descriptionOfMemeTemplate: selectedTemplate?.description || 'Laughing Leo template',
+    };  
 
-    console.log('📤 Calling ai-generate-captions...');
-    const startTime = Date.now();
     const data = await callEdgeFunction('ai-generate-captions', requestBody);
-    const duration = Date.now() - startTime;
 
-    console.log(`\n✅ Success! Completed in ${duration}ms\n`);
-    console.log('📊 Response:\n');
-    console.log('✨ Generated Captions:\n');
-    
     if (data.aiCaptions && Array.isArray(data.aiCaptions)) {
+      // Print only the 3 captions, minimal output per run
+      console.log(`\nRun ${runLabel}:`);
       data.aiCaptions.forEach((caption, i) => {
-        console.log(`   ${i + 1}. "${caption}"`);
+        console.log(`  ${i + 1}. "${caption}"`);
       });
-      console.log('\n🎉 TEST 2 PASSED: Caption generation successful!\n');
       return true;
     } else {
-      console.error('❌ Unexpected response format:', data);
+      console.log(`\nRun ${runLabel}: FAILED (unexpected response)`);
       return false;
     }
-
   } catch (error) {
-    console.error('\n❌ TEST 2 FAILED:');
-    console.error('   Error:', error.message);
+    console.log(`\nRun ${runLabel}: FAILED`);
     return false;
   }
 }
@@ -188,11 +171,11 @@ async function testRefineCaption() {
   console.log('\n' + '='.repeat(70));
   console.log('🧪 TEST 3: hf-refine-caption');
   console.log('='.repeat(70));
-  console.log('📋 Task: AI picks and refines the best of 3 human captions');
+  console.log('📋 Task: AI picks and refines the best of 3 human captions (Technology/AI)');
   console.log('📦 Using template: Change_My_Mind.jpg\n');
 
   try {
-    const templatePath = '../src/assets/templates/Change_My_Mind.jpg';
+    const templatePath = '../src/assets/templates/tech/Change_My_Mind.jpg';
     const base64Image = loadImageAsBase64(templatePath);
     
     console.log('✅ Loaded template image');
@@ -232,7 +215,7 @@ async function testRefineCaption() {
 
   } catch (error) {
     console.error('\n❌ TEST 3 FAILED:');
-    console.error('   Error:', error.message);
+    // Detailed error message removed per request
     return false;
   }
 }
@@ -255,33 +238,19 @@ async function runAllTests() {
     refineCaption: false,
   };
 
-  // Run tests sequentially
-  const test1Result = await testSelectTemplate();
-  results.selectTemplate = test1Result.success;
-  
-  const test2Result = await testGenerateCaptions(test1Result);
-  results.generateCaptions = test2Result;
-  
-  // TEST 3 DISABLED
-  // results.refineCaption = await testRefineCaption();
-
-  // Summary
-  console.log('\n' + '█'.repeat(70));
-  console.log('📊 TEST SUMMARY');
-  console.log('█'.repeat(70));
-  console.log(`\n  ai-select-template:     ${results.selectTemplate ? '✅ PASSED' : '❌ FAILED'}`);
-  console.log(`  ai-generate-captions:   ${results.generateCaptions ? '✅ PASSED' : '❌ FAILED'}`);
-  console.log(`  hf-refine-caption:      ${results.refineCaption ? '✅ PASSED' : '❌ FAILED'}`);
-
-  const allPassed = results.selectTemplate && results.generateCaptions && results.refineCaption;
-  
-  if (allPassed) {
-    console.log('\n🎉 ALL TESTS PASSED! All edge functions are working correctly!\n');
-    process.exit(0);
-  } else {
-    console.log('\n⚠️  SOME TESTS FAILED. Please check the errors above.\n');
-    process.exit(1);
+  // Run ai-generate-captions 3 times using Laughing_Leo (Test 1 disabled)
+  const runResults = [];
+  for (let i = 1; i <= 3; i++) {
+    const ok = await testGenerateCaptions(FIXED_TEMPLATE, i);
+    runResults.push(ok);
   }
+
+  // Minimal summary
+  const successCount = runResults.filter(Boolean).length;
+  console.log('\n' + '█'.repeat(40));
+  console.log(`Runs completed: ${runResults.length}, successes: ${successCount}`);
+  console.log('█'.repeat(40));
+  process.exit(successCount === runResults.length ? 0 : 1);
 }
 
 // Run tests

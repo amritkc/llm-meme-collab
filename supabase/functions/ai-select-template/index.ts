@@ -63,29 +63,32 @@ serve(async (req: Request) => {
       );
     }
 
-    const model = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+    const model = Deno.env.get("OPENAI_MODEL") || "gpt-5-mini";
 
-    // Build user message
-    let userMessage = `Topic: ${topic}\n\nAvailable Templates:\n`;
-    for (let i = 0; i < templates.length; i++) {
-      const template = templates[i];
-      userMessage += `\nTemplate ID: ${template.templateId}\n`;
-      if (template.description) {
-        userMessage += `Description: ${template.description}\n`;
-      }
-      userMessage += `(Image ${i + 1} attached)\n`;
-    }
-
-    // Build content array with text + images
+    // Build content array with interleaved text and images
     const content: any[] = [
       {
         type: "text",
-        text: userMessage,
+        text: `Topic: ${topic}\n\nPlease carefully examine each template image and select the one that best fits the given topic. Return the ID of your selected template.`,
       },
     ];
 
-    // Add all template images
-    for (const template of templates) {
+    // Add templates with images interleaved
+    for (let i = 0; i < templates.length; i++) {
+      const template = templates[i];
+      
+      // Add template info text
+      let templateInfo = `\n--- Template ${i + 1} ---\nTemplate ID: ${template.templateId}`;
+      if (template.description) {
+        templateInfo += `\nDescription: ${template.description}`;
+      }
+      
+      content.push({
+        type: "text",
+        text: templateInfo,
+      });
+
+      // Immediately follow with the image
       content.push({
         type: "image_url",
         image_url: {
@@ -109,7 +112,7 @@ serve(async (req: Request) => {
             {
               role: "system",
               content:
-                "You choose the best meme template for the given topic. Output JSON only.",
+                "You are given four meme templates to choose from, please choose the best fitting meme template for the given topic, dont just always choose the first template. Output JSON only (the ID of the chosen template).",
             },
             {
               role: "user",

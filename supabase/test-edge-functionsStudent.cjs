@@ -74,7 +74,7 @@ async function testSelectTemplate() {
         templateId: '03',
         name: 'Disaster_Girl.jpg',
         path: '../src/assets/templates/daily/Disaster_Girl.jpg',
-        description: " Dont choose this meme for now.",
+        description: "Girl smiling evilly in front of a burning house, which she probably caused.",
       },
     ];
 

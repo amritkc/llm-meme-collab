@@ -46,35 +46,35 @@ async function testSelectTemplate() {
   console.log('\n' + '='.repeat(70));
   console.log('🧪 TEST 1: ai-select-template');
   console.log('='.repeat(70));
-  console.log('📋 Task: AI selects the best meme template for "Student Life"');
-  console.log('📦 Testing with 4 templates\n');
+  console.log('📋 Task: AI selects the best meme template for "Technology/AI"');
+  console.log('📦 Testing with 4 templates (Technology/AI)\n');
 
   try {
-    // Load the first 4 templates with short descriptions
+    // Load the four Technology/AI templates with short descriptions
     const templates = [
       {
         templateId: '00',
-        name: 'You_know_Im_something_of_a_scientist_myself.jpg',
-        path: '../src/assets/templates/daily/You_know_Im_something_of_a_scientist_myself.jpg',
-        description: "A man wearing glasses smiling proudly, leaning slightly forward, appearing self-satisfied.",
+        name: 'Absolute_Cinema.jpg',
+        path: '../src/assets/templates/tech/Absolute_Cinema.jpg',
+        description: "A man sitting in a movie theater seat, smiling with approval while watching a screen, with dramatic lighting.",
       },
       {
         templateId: '01',
-        name: 'Laughing_Leo.jpg',
-        path: '../src/assets/templates/daily/Laughing_Leo.jpg',
-        description: "A well-dressed man in a suit laughing confidently while holding a drink at a formal party or event.",
+        name: 'Change_My_Mind.jpg',
+        path: '../src/assets/templates/tech/Change_My_Mind.jpg',
+        description: "A man sitting at a table outdoors with a sign in front of him on which is written \"Change My Mind\", appearing ready to debate or challenge an opinion.",
       },
       {
         templateId: '02',
-        name: 'You_Guys_Are_Getting_Paid.jpg',
-        path: '../src/assets/templates/daily/You_Guys_Are_Getting_Paid.jpg',
-        description: "A man with a confused and annoyed expression, appearing surprised or incredulous.",
+        name: 'One_Does_Not_Simply.jpg',
+        path: '../src/assets/templates/tech/One_Does_Not_Simply.jpg',
+        description: "A man with long hair and a serious expression gesturing with his hand while speaking emphatically.",
       },
       {
         templateId: '03',
-        name: 'Disaster_Girl.jpg',
-        path: '../src/assets/templates/daily/Disaster_Girl.jpg',
-        description: " Dont choose this meme for now.",
+        name: 'Surprised_Pikachu.jpg',
+        path: '../src/assets/templates/tech/Surprised_Pikachu.jpg',
+        description: "A yellow cartoon character with wide eyes and an open mouth, showing shock or surprise.",
       },
     ];
 
@@ -91,7 +91,7 @@ async function testSelectTemplate() {
     });
 
     const requestBody = {
-      topic: 'Student Life',
+      topic: 'Technology/AI',
       templates: templatesWithBase64,
     };
 
@@ -131,7 +131,7 @@ async function testGenerateCaptions(selectedTemplateData) {
   console.log('\n' + '='.repeat(70));
   console.log('🧪 TEST 2: ai-generate-captions');
   console.log('='.repeat(70));
-  console.log('📋 Task: AI generates 3 funny captions for "Student Life"');
+  console.log('📋 Task: AI generates 3 funny captions for "Technology/AI"');
   
   if (!selectedTemplateData || !selectedTemplateData.success) {
     console.log('❌ Using default template (Test 1 failed)\n');
@@ -150,7 +150,7 @@ async function testGenerateCaptions(selectedTemplateData) {
     console.log(`📦 Size: ${(base64Image.length / 1024).toFixed(2)} KB\n`);
 
     const requestBody = {
-      topic: 'Student Life',
+      topic: 'Technology/AI',
       templateBase64: base64Image,
       templateMimeType: 'image/jpeg',
       descriptionOfMemeTemplate: selectedTemplate?.description || 'Template selected by AI',
@@ -188,11 +188,11 @@ async function testRefineCaption() {
   console.log('\n' + '='.repeat(70));
   console.log('🧪 TEST 3: hf-refine-caption');
   console.log('='.repeat(70));
-  console.log('📋 Task: AI picks and refines the best of 3 human captions');
+  console.log('📋 Task: AI picks and refines the best of 3 human captions (Technology/AI)');
   console.log('📦 Using template: Change_My_Mind.jpg\n');
 
   try {
-    const templatePath = '../src/assets/templates/Change_My_Mind.jpg';
+    const templatePath = '../src/assets/templates/tech/Change_My_Mind.jpg';
     const base64Image = loadImageAsBase64(templatePath);
     
     console.log('✅ Loaded template image');
@@ -232,7 +232,7 @@ async function testRefineCaption() {
 
   } catch (error) {
     console.error('\n❌ TEST 3 FAILED:');
-    console.error('   Error:', error.message);
+    // Detailed error message removed per request
     return false;
   }
 }
