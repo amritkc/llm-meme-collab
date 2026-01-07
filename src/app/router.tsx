@@ -15,7 +15,7 @@ import NotFound from "../pages/Notfound/NotFound";
 export const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootLayout />,
+    // element: <RootLayout />,
     children: [
       { index: true, element: <Consent /> },
       { path: "home", element: <Home /> },

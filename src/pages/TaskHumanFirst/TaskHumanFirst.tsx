@@ -390,59 +390,7 @@ export default function TaskHumanFirst() {
         />
       </Paper>
 
-      {/* ✅ Fixed timer widget (top-right) */}
-      <Tooltip
-        arrow
-        placement="left"
-        title={
-          <Box>
-            <Typography variant="subtitle2" fontWeight={800}>
-              Topic timer
-            </Typography>
-            <Typography variant="body2">
-              {formatMMSS(secondsLeft)} remaining (1 minute per topic)
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Progress: {progressPct}%
-            </Typography>
-          </Box>
-        }
-      >
-        <Paper
-          elevation={8}
-          sx={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 9999,
-            px: 1.5,
-            py: 1,
-            borderRadius: 999,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <Chip
-            icon={<AccessTimeIcon />}
-            label={formatMMSS(secondsLeft)}
-            color={isLowTime ? "error" : "primary"}
-            variant={isLowTime ? "filled" : "outlined"}
-            sx={{ fontWeight: 800 }}
-          />
-          <Box sx={{ minWidth: 120 }}>
-            <LinearProgress
-              variant="determinate"
-              value={progressPct}
-              sx={{ height: 8, borderRadius: 99 }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
-              Topic {activeIndex + 1}/{tasks.length}
-            </Typography>
-          </Box>
-        </Paper>
-      </Tooltip>
+
 
       <Stack spacing={3}>
         {/* Topic Card */}
@@ -494,20 +442,6 @@ export default function TaskHumanFirst() {
                       Change template
                     </Button>
                   </Stack>
-                  
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      bgcolor: alpha(theme.palette.info.main, 0.05),
-                      borderRadius: 2,
-                      border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-                    }}
-                  >
-                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      💡 <strong>Tip:</strong> You can drag the caption text to reposition it and resize it
-                    </Typography>
-                  </Paper>
                   
                   {/* Idea Selector */}
                   <Box>
@@ -561,6 +495,20 @@ export default function TaskHumanFirst() {
                       })}
                     </Stack>
                   </Box>
+
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      bgcolor: alpha(theme.palette.info.main, 0.05),
+                      borderRadius: 2,
+                      border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      💡 <strong>Tip:</strong> You can drag the caption text to reposition it and resize it
+                    </Typography>
+                  </Paper>
 
                   <MemeEditor
                     imageUrl={selectedTemplate?.imageUrl ?? null}
@@ -643,68 +591,107 @@ export default function TaskHumanFirst() {
           </Card>
         </Stack>
 
-        {/* <Card>
-          <CardContent>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Box>
-                <Typography variant="subtitle1" fontWeight={800}>
-                  3) Create the meme
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  After choosing a template, the editor appears above in Step 1.
-                </Typography>
-              </Box>
-            </Stack>
+        {/* Add some bottom padding to prevent content from being hidden behind the fixed button */}
+        <Box sx={{ height: 100 }} />
+      </Stack>
 
-            <Divider sx={{ my: 1.5 }} />
-            <Typography variant="body2" color="text.secondary">
-              Use the editor in Step 1 to drag text, change sizes, and add boxes.
-            </Typography>
-          </CardContent>
-        </Card> */}
-
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            background: alpha(theme.palette.background.paper, 1),
-          }}
-        >
-          <Stack direction="row" spacing={2} justifyContent="space-between">
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={goPrev}
-              disabled={activeIndex === 0 || saving}
-              sx={{ px: 4, borderRadius: 2 }}
-            >
-              Back
-            </Button>
-
-            <Button
-              variant="contained"
-              size="large"
-              onClick={goNext}
-              disabled={!canContinue || saving}
+      {/* Fixed floating button bar at bottom with timer */}
+      <Paper
+        elevation={8}
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          p: 2,
+          borderRadius: 0,
+          borderTop: `2px solid ${theme.palette.divider}`,
+          backdropFilter: "blur(10px)",
+          background: alpha(theme.palette.background.paper, 0.95),
+        }}
+      >
+        <Container maxWidth="xl">
+          <Stack 
+            direction={{ xs: "column", sm: "row" }} 
+            spacing={2} 
+            justifyContent="space-between" 
+            alignItems="center"
+          >
+            {/* Timer on the left */}
+            <Paper
+              elevation={2}
               sx={{
-                px: 4,
+                px: 2,
+                py: 1,
                 borderRadius: 2,
-                boxShadow: 3,
-                '&:hover': {
-                  boxShadow: 6,
-                },
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
               }}
             >
-              {saving
-                ? "Saving..."
-                : activeIndex === tasks.length - 1
-                ? "Finish → Done"
-                : "Save & Next Topic"}
-            </Button>
+              <Chip
+                icon={<AccessTimeIcon />}
+                label={formatMMSS(secondsLeft)}
+                color={isLowTime ? "error" : "primary"}
+                variant={isLowTime ? "filled" : "outlined"}
+                sx={{ fontWeight: 800 }}
+              />
+              <Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={progressPct}
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 99, 
+                    minWidth: 100,
+                    mb: 0.5,
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Topic {activeIndex + 1}/{tasks.length}
+                </Typography>
+              </Box>
+            </Paper>
+
+            {/* Buttons on the right */}
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={goPrev}
+                disabled={activeIndex === 0 || saving}
+                sx={{ px: 4, borderRadius: 2 }}
+              >
+                Back
+              </Button>
+
+              <Button
+                variant="contained"
+                size="large"
+                onClick={goNext}
+                disabled={!canContinue || saving}
+                sx={{
+                  px: 4,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  '&:hover': {
+                    boxShadow: 6,
+                  },
+                }}
+              >
+                {saving
+                  ? "Saving..."
+                  : activeIndex === tasks.length - 1
+                  ? "Finish → Done"
+                  : "Save & Next Topic"}
+              </Button>
+            </Stack>
           </Stack>
-        </Paper>
-      </Stack>
+        </Container>
+      </Paper>
 
       <Snackbar
         open={toast.open}
