@@ -496,6 +496,20 @@ export default function TaskHumanFirst() {
                     </Button>
                   </Stack>
                   
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      bgcolor: alpha(theme.palette.info.main, 0.05),
+                      borderRadius: 2,
+                      border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      💡 <strong>Tip:</strong> You can drag the caption text to reposition it and resize it
+                    </Typography>
+                  </Paper>
+                  
                   {/* Idea Selector */}
                   <Box>
                     <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
