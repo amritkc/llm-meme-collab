@@ -331,7 +331,8 @@ export default function TaskHumanFirst() {
         return;
       }
 
-      nav("/done");
+      // Redirect to Prolific completion URL
+      window.location.href = "https://app.prolific.com/submissions/complete?cc=C1QDK8F6";
     } catch (err: any) {
       console.error(err);
       setToast({

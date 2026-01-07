@@ -31,32 +31,13 @@ const ConsentForm = () => {
 
   const handleAgree = () => {
     setConsented(true);
+    setCondition("human-first");
     
-    // Get studyid from URL to determine condition
-    const studyId = searchParams.get('studyid');
+    // Get query parameters and preserve them
     const queryString = searchParams.toString();
     
-    if (studyId) {
-      const studyIdLower = studyId.toLowerCase();
-      
-      if (studyIdLower === 'aifirst') {
-        setCondition("ai-first");
-        navigate(`/intro/ai?${queryString}`);
-      } else if (studyIdLower === 'humanfirst') {
-        setCondition("human-first");
-        navigate(`/intro/human?${queryString}`);
-      } else {
-        // Default random assignment
-        const c = Math.random() < 0.5 ? "human-first" : "ai-first";
-        setCondition(c);
-        navigate(c === "human-first" ? `/intro/human?${queryString}` : `/intro/ai?${queryString}`);
-      }
-    } else {
-      // Random assignment if no studyid in URL
-      const c = Math.random() < 0.5 ? "human-first" : "ai-first";
-      setCondition(c);
-      navigate(c === "human-first" ? `/intro/human?${queryString}` : `/intro/ai?${queryString}`);
-    }
+    // Navigate directly to TaskHumanFirst
+    navigate(`/task/human-first?${queryString}`);
   };
 
   return (
