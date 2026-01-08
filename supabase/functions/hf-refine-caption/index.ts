@@ -99,7 +99,7 @@ serve(async (req: Request) => {
     userMessage += `A) ${humanCaptions[0]}\n`;
     userMessage += `B) ${humanCaptions[1]}\n`;
     userMessage += `C) ${humanCaptions[2]}\n\n`;
-    userMessage += `Pick the best caption and improve it to make it funnier and more impactful. Keep it short.`;
+    userMessage += `Evaluate the three captions and select the one that is funniest and best matches the meme template. If beneficial, edit it to improve clarity, timing, or humor.`;
 
     // Build content array with text + image
     const content = [
