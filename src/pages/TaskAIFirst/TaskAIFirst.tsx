@@ -11,7 +11,6 @@ import {
   Snackbar,
   Alert,
   LinearProgress,
-  Tooltip,
   Paper,
   Chip,
   Container,
@@ -36,6 +35,156 @@ import MemeEditor, { type MemeTextLayer } from "../../Components/MemeEditor/Meme
 import { exportMemePNG } from "../../Components/MemeEditor/exportMeme";
 import { uploadMemeAndInsertRow } from "../../lib/memeUpload";
 import { supabase } from "../../lib/supabaseClient";
+
+/**
+ * Get an unused meme variation for a participant and topic
+ * Ensures each participant gets a unique meme for research purposes
+ * Uses retry logic to handle race conditions when multiple users access simultaneously
+ */
+async function getUnusedVariation(
+  participantId: string,
+  topicTitle: string
+): Promise<number | null> {
+  const MAX_RETRIES = 10;
+  let attempt = 0;
+
+  // 1. Check if this participant already has an assignment for this topic
+  try {
+    const { data: existingAssignment } = await supabase
+      .from("meme_assignments")
+      .select("variation_number")
+      .eq("participant_id", participantId)
+      .eq("topic", topicTitle)
+      .single();
+
+    if (existingAssignment?.variation_number != null) {
+      console.log("✅ Using existing assignment:", existingAssignment.variation_number);
+      return existingAssignment.variation_number;
+    }
+  } catch (err) {
+    // No existing assignment, continue
+  }
+
+  // 2. Retry loop to handle race conditions
+  while (attempt < MAX_RETRIES) {
+    attempt++;
+    console.log(`🔄 Attempt ${attempt}/${MAX_RETRIES} to get unique variation for ${topicTitle}`);
+
+    try {
+      // Get all assigned variations for this topic
+      const { data: assignments, error: assignError } = await supabase
+        .from("meme_assignments")
+        .select("variation_number")
+        .eq("topic", topicTitle);
+
+      if (assignError && assignError.code !== 'PGRST116') {
+        console.error("Error fetching assignments:", assignError);
+      }
+
+      const usedVariations = new Set(
+        (assignments || []).map((a) => a.variation_number).filter(v => v != null)
+      );
+
+      // Get total available variations for this topic
+      const { data: availableMemes, error: countError } = await supabase
+        .from("aimemes")
+        .select("id, variation_number")
+        .eq("topic", topicTitle);
+
+      console.log(`📊 Query result for topic "${topicTitle}":`, {
+        found: availableMemes?.length || 0,
+        sample: availableMemes?.[0],
+        error: countError
+      });
+
+      if (countError) throw countError;
+
+      if (!availableMemes || availableMemes.length === 0) {
+        console.error("❌ No memes available for topic:", topicTitle);
+        return null;
+      }
+
+      // Check if variation_number exists in the data
+      const hasVariationNumbers = availableMemes.some(m => m.variation_number != null);
+      console.log(`🔍 Has variation_number field:`, hasVariationNumbers);
+      
+      let selectedVariation: number;
+      
+      if (hasVariationNumbers) {
+        // Use variation_number field
+        const allVariations = availableMemes
+          .map((m) => m.variation_number)
+          .filter(v => v != null);
+        
+        const unusedVariations = allVariations.filter(
+          (v) => !usedVariations.has(v)
+        );
+
+        if (unusedVariations.length === 0) {
+          console.warn("⚠️ All variations used for topic:", topicTitle);
+          selectedVariation = allVariations[Math.floor(Math.random() * allVariations.length)];
+        } else {
+          selectedVariation = unusedVariations[Math.floor(Math.random() * unusedVariations.length)];
+          console.log(`🎯 Selected unused variation ${selectedVariation} from ${unusedVariations.length} available`);
+        }
+      } else {
+        // Fallback: use ID-based assignment
+        console.warn("⚠️ variation_number not found, using ID-based assignment");
+        const usedIds = new Set(
+          (assignments || []).map((a) => a.variation_number).filter(v => v != null)
+        );
+        
+        const allIds = availableMemes.map(m => m.id);
+        const unusedIds = allIds.filter(id => !usedIds.has(id));
+        
+        if (unusedIds.length === 0) {
+          selectedVariation = allIds[Math.floor(Math.random() * allIds.length)];
+        } else {
+          selectedVariation = unusedIds[Math.floor(Math.random() * unusedIds.length)];
+        }
+      }
+
+      // Try to record assignment (this is where race condition is prevented)
+      const { error: insertError } = await supabase
+        .from("meme_assignments")
+        .insert({
+          participant_id: participantId,
+          topic: topicTitle,
+          variation_number: selectedVariation,
+          assigned_at: new Date().toISOString(),
+        });
+
+      if (!insertError) {
+        // Success! Assignment recorded
+        console.log(`✅ Successfully assigned variation ${selectedVariation} to ${participantId}`);
+        return selectedVariation;
+      }
+
+      // Check if it's a UNIQUE constraint violation (race condition)
+      if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+        console.warn(`⚠️ Variation ${selectedVariation} was just taken by another user. Retrying...`);
+        // Add small random delay to reduce collision probability
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+        continue; // Retry with fresh data
+      }
+
+      // Other error - log and continue anyway
+      console.error("Failed to record assignment:", insertError);
+      return selectedVariation;
+
+    } catch (err) {
+      console.error(`Error on attempt ${attempt}:`, err);
+      if (attempt >= MAX_RETRIES) {
+        return null;
+      }
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+    }
+  }
+
+  console.error(`❌ Failed to get unique variation after ${MAX_RETRIES} attempts`);
+  return null;
+}
 
 // Student Life templates
 import successKid from "../../assets/templates/Success_Kid.jpg";
@@ -125,6 +274,7 @@ type AIMemeData = {
   bucket: string;
   created_at: string;
   pk: string;
+  variation_number?: number;
 };
 
 type IdeaState = {
@@ -181,6 +331,8 @@ export default function TaskAIFirst() {
   const [hasEdited, setHasEdited] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showHelpDialog, setShowHelpDialog] = useState(true);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const [secondsLeft, setSecondsLeft] = useState(TOPIC_SECONDS);
   const [toast, setToast] = useState<{
@@ -207,51 +359,67 @@ export default function TaskAIFirst() {
   const activeState = stateByTopic[activeIndex];
 
   // Fetch AI meme data from Supabase when topic loads
+  // NOTE: We show a random meme but DON'T assign it yet (assignment happens on save)
   useEffect(() => {
     const fetchAIMemes = async () => {
       const topicTitle = activeTask.title;
       
+      console.log("🔍 Loading random meme preview for topic:", topicTitle);
+      
       updateActiveState({ loading: true });
       
       try {
+        // Just get a random meme for preview - NO assignment yet!
         const { data, error } = await supabase
           .from("aimemes")
           .select("*")
           .eq("topic", topicTitle)
-          .limit(1)
-          .single();
+          .limit(100);
 
         if (error) throw error;
 
-        if (data) {
-          const aiMeme = data as AIMemeData;
-          
-          // Get template ID from local templates
-          const localImageUrl = TEMPLATE_MAP[aiMeme.template];
-          const template = activeTask.templates.find(t => t.imageUrl === localImageUrl);
-          
-          const ideas: [IdeaState, IdeaState, IdeaState] = [
-            {
-              caption: aiMeme.caption1,
-              layers: captionToLayers(aiMeme.caption1),
-            },
-            {
-              caption: aiMeme.caption2,
-              layers: captionToLayers(aiMeme.caption2),
-            },
-            {
-              caption: aiMeme.caption3,
-              layers: captionToLayers(aiMeme.caption3),
-            },
-          ];
-
-          updateActiveState({
-            aiMemeData: aiMeme,
-            selectedTemplateId: template?.id || null,
-            ideas,
-            loading: false,
-          });
+        if (!data || data.length === 0) {
+          throw new Error("No memes available for this topic");
         }
+
+        // Pick random meme for preview
+        const randomMeme = data[Math.floor(Math.random() * data.length)] as AIMemeData;
+        
+        console.log("🎨 Showing random preview meme (not assigned yet):", {
+          topic: randomMeme.topic,
+          variation: randomMeme.variation_number,
+          template: randomMeme.template
+        });
+        
+        // Get template ID from local templates
+        const localImageUrl = TEMPLATE_MAP[randomMeme.template];
+        const template = activeTask.templates.find(t => t.imageUrl === localImageUrl);
+        
+        if (!template) {
+          console.warn("⚠️ Template not found for:", randomMeme.template);
+        }
+        
+        const ideas: [IdeaState, IdeaState, IdeaState] = [
+          {
+            caption: randomMeme.caption1,
+            layers: captionToLayers(randomMeme.caption1),
+          },
+          {
+            caption: randomMeme.caption2,
+            layers: captionToLayers(randomMeme.caption2),
+          },
+          {
+            caption: randomMeme.caption3,
+            layers: captionToLayers(randomMeme.caption3),
+          },
+        ];
+
+        updateActiveState({
+          aiMemeData: randomMeme,
+          selectedTemplateId: template?.id || null,
+          ideas,
+          loading: false,
+        });
       } catch (err) {
         console.error("Error fetching AI memes:", err);
         setToast({
@@ -344,43 +512,92 @@ export default function TaskAIFirst() {
       return;
     }
 
-    await saveAndContinue();
+    // Generate preview and show dialog
+    await showPreview();
+  };
+
+  const showPreview = async () => {
+    try {
+      const selectedIdea = activeState.ideas[activeState.bestIdeaIndex];
+      const memePng = await exportMemePNG({
+        imageUrl: selectedTemplate?.imageUrl ?? '',
+        layers: selectedIdea.layers,
+        width: 1400,
+      });
+      setPreviewImageUrl(memePng);
+      setShowPreviewDialog(true);
+    } catch (err) {
+      console.error('Failed to generate preview:', err);
+      setToast({
+        open: true,
+        type: 'error',
+        msg: 'Failed to generate preview',
+      });
+    }
   };
 
   const saveAndContinue = async () => {
-
+    setShowPreviewDialog(false);
     setSaving(true);
     try {
-      // Save all 3 AI ideas separately
-      for (let ideaIndex = 0; ideaIndex < 3; ideaIndex++) {
-        const idea = activeState.ideas[ideaIndex];
-        
-        // Generate meme for this idea
-        const memePng = await exportMemePNG({
-          imageUrl: selectedTemplate?.imageUrl ?? '',
-          layers: idea.layers,
-          width: 1400,
-        });
+      const topicTitle = activeTask.title;
+      
+      // 1. FIRST: Claim a unique variation for this user and topic
+      console.log("🔒 Claiming unique meme variation...");
+      const variationNumber = await getUnusedVariation(participantId, topicTitle);
 
-        // Upload to Supabase
-        await uploadMemeAndInsertRow({
-          bucket: "memes",
-          table: "meme_ai_submissions",
-          participantId,
-          prolificPid: session.prolificPid,
-          studyId: session.studyId,
-          sessionId: session.sessionId,
-          task: "ai",
-          topicId: activeTask.topicId,
-          templateId: activeState.selectedTemplateId ?? '',
-          ideaIndex,
-          caption: idea.caption,
-          layers: idea.layers,
-          memeDataUrl: memePng,
-        });
+      if (variationNumber === null) {
+        throw new Error("Unable to assign unique meme. All variations may be taken.");
       }
 
-      setToast({ open: true, type: "success", msg: "All 3 AI ideas saved!" });
+      console.log(`✅ Successfully claimed variation ${variationNumber} for ${topicTitle}`);
+
+      // 2. Get the actual meme data for this variation
+      const { data: assignedMeme, error: fetchError } = await supabase
+        .from("aimemes")
+        .select("*")
+        .eq("topic", topicTitle)
+        .eq("variation_number", variationNumber)
+        .single();
+
+      if (fetchError || !assignedMeme) {
+        throw new Error("Failed to fetch assigned meme data");
+      }
+
+      console.log("📦 Assigned meme:", assignedMeme);
+
+      // 3. Save only the selected/edited meme with the ASSIGNED variation
+      const selectedIdea = activeState.ideas[activeState.bestIdeaIndex];
+      
+      // Use the preview image if available, otherwise generate
+      const memePng = previewImageUrl || await exportMemePNG({
+        imageUrl: selectedTemplate?.imageUrl ?? '',
+        layers: selectedIdea.layers,
+        width: 1400,
+      });
+
+      // 4. Upload to Supabase with the assigned variation number
+      await uploadMemeAndInsertRow({
+        bucket: "memes",
+        table: "meme_ai_submissions",
+        participantId,
+        prolificPid: session.prolificPid,
+        studyId: session.studyId,
+        sessionId: session.sessionId,
+        task: "ai",
+        topicId: activeTask.topicId,
+        templateId: activeState.selectedTemplateId ?? '',
+        ideaIndex: activeState.bestIdeaIndex,
+        caption: selectedIdea.caption,
+        layers: selectedIdea.layers,
+        memeDataUrl: memePng,
+        variationNumber: variationNumber, // Store which variation was used
+      });
+
+      setToast({ open: true, type: "success", msg: "Meme saved successfully!" });
+
+      // Cleanup preview
+      setPreviewImageUrl(null);
 
       const isLast = activeIndex === tasks.length - 1;
       if (!isLast) {
@@ -404,7 +621,7 @@ export default function TaskAIFirst() {
 
   const handleConfirmSave = async () => {
     setShowConfirmDialog(false);
-    await saveAndContinue();
+    await showPreview();
   };
 
   const handleCancelSave = () => {
@@ -478,61 +695,6 @@ export default function TaskAIFirst() {
         />
       </Paper>
 
-      {/* Fixed timer widget (top-right) */}
-      <Tooltip
-        arrow
-        placement="left"
-        title={
-          <Box>
-            <Typography variant="subtitle2" fontWeight={800}>
-              Topic timer
-            </Typography>
-            <Typography variant="body2">
-              {formatMMSS(secondsLeft)} remaining (5 minutes per topic)
-            </Typography>
-            <Typography variant="caption" sx={{ opacity: 0.8 }}>
-              Progress: {progressPct}%
-            </Typography>
-          </Box>
-        }
-      >
-        <Paper
-          elevation={8}
-          sx={{
-            position: "fixed",
-            top: 16,
-            right: 16,
-            zIndex: 9999,
-            px: 1.5,
-            py: 1,
-            borderRadius: 999,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <Chip
-            icon={<AccessTimeIcon />}
-            label={formatMMSS(secondsLeft)}
-            color={isLowTime ? "error" : "secondary"}
-            variant={isLowTime ? "filled" : "outlined"}
-            sx={{ fontWeight: 800 }}
-          />
-          <Box sx={{ minWidth: 120 }}>
-            <LinearProgress
-              variant="determinate"
-              value={progressPct}
-              color="secondary"
-              sx={{ height: 8, borderRadius: 99 }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
-              Topic {activeIndex + 1}/{tasks.length}
-            </Typography>
-          </Box>
-        </Paper>
-      </Tooltip>
-
       <Stack spacing={3}>
         {/* Topic Card */}
         <Card
@@ -603,13 +765,13 @@ export default function TaskAIFirst() {
                     <strong>Step 2:</strong> Review the 3 AI-generated caption ideas on the right
                   </Typography>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
-                    <strong>Step 3:</strong> You task is to Edit any caption you want to improve 
+                    <strong>Step 3:</strong> Your task: Select one caption and refine it to make it better (edit the text to improve humor, clarity, or impact)
                   </Typography>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
-                    <strong>Step 4:</strong> Select an idea to customize with the editor
+                    <strong>Step 4:</strong> Use the editor to adjust text positioning
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
-                    <strong>Step 5:</strong> Click "Save & Next Topic" - all 3 ideas will be saved!
+                    <strong>Step 5:</strong> Click "Preview & Save" - only your refined meme will be saved!
                   </Typography>
                   <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 3, textAlign: 'center' }}>
                     ⏳ Waiting for AI memes to load...
@@ -670,9 +832,19 @@ export default function TaskAIFirst() {
                             }}
                           >
                             <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                              <Typography variant="caption" fontWeight={800} color="secondary">
-                                Idea {idx + 1}
-                              </Typography>
+                              <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="space-between">
+                                <Typography variant="caption" fontWeight={800} color="secondary">
+                                  Idea {idx + 1}
+                                </Typography>
+                                {isSelected && (
+                                  <Chip
+                                    label="Will Save"
+                                    size="small"
+                                    color="secondary"
+                                    sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700 }}
+                                  />
+                                )}
+                              </Stack>
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -751,10 +923,10 @@ export default function TaskAIFirst() {
                     <strong>Step 2:</strong> Review the 3 AI-generated caption ideas
                   </Typography>
                   <Typography variant="body1" color="text.secondary" sx={{ mb: 1.5 }}>
-                    <strong>Step 3:</strong> Select one idea to customize with the editor
+                    <strong>Step 3:</strong> Your task: Select and refine one caption to improve it
                   </Typography>
                   <Typography variant="body1" color="text.secondary">
-                    <strong>Step 4:</strong> Click "Save & Next Topic" - all 3 ideas will be saved!
+                    <strong>Step 4:</strong> Preview and save - only your refined meme will be saved!
                   </Typography>
                   <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 3, textAlign: 'center' }}>
                     ⏳ Waiting for AI memes to load...
@@ -811,49 +983,109 @@ export default function TaskAIFirst() {
           </Card>
         </Stack>
 
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            background: alpha(theme.palette.background.paper, 1),
-          }}
-        >
-          <Stack direction="row" spacing={2} justifyContent="space-between">
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={goPrev}
-              disabled={activeIndex === 0 || saving}
-              sx={{ px: 4, borderRadius: 2 }}
-            >
-              Back
-            </Button>
+        {/* Add some bottom padding to prevent content from being hidden behind the fixed button */}
+        <Box sx={{ height: 100 }} />
+      </Stack>
 
-            <Button
-              variant="contained"
-              size="large"
-              color="secondary"
-              onClick={goNext}
-              disabled={!canContinue || saving}
+      {/* Fixed floating button bar at bottom with timer */}
+      <Paper
+        elevation={8}
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          p: 2,
+          borderRadius: 0,
+          borderTop: `2px solid ${theme.palette.divider}`,
+          backdropFilter: "blur(10px)",
+          background: alpha(theme.palette.background.paper, 0.95),
+        }}
+      >
+        <Container maxWidth="xl">
+          <Stack 
+            direction={{ xs: "column", sm: "row" }} 
+            spacing={2} 
+            justifyContent="space-between" 
+            alignItems="center"
+          >
+            {/* Timer on the left */}
+            <Paper
+              elevation={2}
               sx={{
-                px: 4,
+                px: 2,
+                py: 1,
                 borderRadius: 2,
-                boxShadow: 3,
-                '&:hover': {
-                  boxShadow: 6,
-                },
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+                bgcolor: alpha(theme.palette.secondary.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
               }}
             >
-              {saving
-                ? "Saving..."
-                : activeIndex === tasks.length - 1
-                ? "Finish → Done"
-                : "Save & Next Topic"}
-            </Button>
+              <Chip
+                icon={<AccessTimeIcon />}
+                label={formatMMSS(secondsLeft)}
+                color={isLowTime ? "error" : "secondary"}
+                variant={isLowTime ? "filled" : "outlined"}
+                sx={{ fontWeight: 800 }}
+              />
+              <Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={progressPct}
+                  color="secondary"
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 99, 
+                    minWidth: 100,
+                    mb: 0.5,
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  Topic {activeIndex + 1}/{tasks.length}
+                </Typography>
+              </Box>
+            </Paper>
+
+            {/* Buttons on the right */}
+            <Stack direction="row" spacing={2}>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={goPrev}
+                disabled={activeIndex === 0 || saving}
+                sx={{ px: 4, borderRadius: 2 }}
+              >
+                Back
+              </Button>
+
+              <Button
+                variant="contained"
+                size="large"
+                color="secondary"
+                onClick={goNext}
+                disabled={!canContinue || saving}
+                sx={{
+                  px: 4,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  '&:hover': {
+                    boxShadow: 6,
+                  },
+                }}
+              >
+                {saving
+                  ? "Saving..."
+                  : activeIndex === tasks.length - 1
+                  ? "Preview & Finish"
+                  : "Preview & Save"}
+              </Button>
+            </Stack>
           </Stack>
-        </Paper>
-      </Stack>
+        </Container>
+      </Paper>
 
       <Snackbar
         open={toast.open}
@@ -907,26 +1139,26 @@ export default function TaskAIFirst() {
             </Box>
             <Box>
               <Typography variant="subtitle2" fontWeight={800} color="secondary" gutterBottom>
-                Step 3: Edit Captions
+                Step 3: Your Task - Refine the Meme
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                You can edit any caption directly in the text boxes to improve or customize them.
+                Review all 3 AI-generated captions. Select the one you like best (or think has potential) and refine it - edit the text to make it funnier, clearer, or more impactful.
               </Typography>
             </Box>
             <Box>
               <Typography variant="subtitle2" fontWeight={800} color="secondary" gutterBottom>
-                Step 4: Customize in Editor
+                Step 4: Customize Positioning
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Select an idea and use the editor on the left to drag, resize, or modify the text placement.
+                Use the editor on the left to fine-tune your selected meme - drag the text to reposition it, resize it, or adjust placement for maximum impact.
               </Typography>
             </Box>
             <Box>
               <Typography variant="subtitle2" fontWeight={800} color="secondary" gutterBottom>
-                Step 5: Save & Continue
+                Step 5: Preview & Save
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Click "Save & Next Topic" when ready - all 3 ideas will be saved automatically!
+                Click "Preview & Save" to see your final meme, then confirm to save only the selected meme.
               </Typography>
             </Box>
           </Stack>
@@ -975,10 +1207,112 @@ export default function TaskAIFirst() {
         </DialogActions>
       </Dialog>
 
+      <Dialog
+        open={showPreviewDialog}
+        onClose={() => setShowPreviewDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.1) }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <AutoAwesomeIcon color="secondary" />
+            <Typography variant="h6" fontWeight={800}>
+              Preview Your Meme
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Stack spacing={2}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                bgcolor: alpha(theme.palette.info.main, 0.05),
+                borderRadius: 2,
+                border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+              }}
+            >
+              <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                📝 This is what will be saved:
+              </Typography>
+            </Paper>
+
+            {previewImageUrl && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  p: 2,
+                  bgcolor: alpha(theme.palette.background.default, 0.5),
+                  borderRadius: 2,
+                }}
+              >
+                <img
+                  src={previewImageUrl}
+                  alt="Meme Preview"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '500px',
+                    borderRadius: '8px',
+                    boxShadow: theme.shadows[4],
+                  }}
+                />
+              </Box>
+            )}
+
+            <Card
+              elevation={2}
+              sx={{
+                bgcolor: alpha(theme.palette.secondary.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
+              }}
+            >
+              <CardContent>
+                <Typography variant="subtitle2" fontWeight={700} color="secondary" gutterBottom>
+                  Selected Caption:
+                </Typography>
+                <Typography variant="body1">
+                  {activeState.ideas[activeState.bestIdeaIndex].caption || '(No caption)'}
+                </Typography>
+              </CardContent>
+            </Card>
+
+            <Paper
+              elevation={0}
+              sx={{
+                p: 1.5,
+                bgcolor: alpha(theme.palette.warning.main, 0.05),
+                borderRadius: 2,
+                border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                ⚠️ Only this selected meme will be saved. The other 2 AI ideas will not be saved.
+              </Typography>
+            </Paper>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5 }}>
+          <Button onClick={() => setShowPreviewDialog(false)} color="inherit" size="large">
+            Cancel
+          </Button>
+          <Button
+            onClick={saveAndContinue}
+            variant="contained"
+            color="secondary"
+            size="large"
+            autoFocus
+            sx={{ px: 4 }}
+          >
+            Confirm & Save
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <LoadingOverlay
         open={saving}
-        message="Saving AI-generated memes..."
-        subtitle="Please wait while we upload all 3 ideas"
+        message="Saving your meme..."
+        subtitle="Please wait while we upload your creation"
       />
     </Container>
   );

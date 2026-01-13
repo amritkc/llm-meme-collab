@@ -31,6 +31,7 @@ export async function uploadMemeAndInsertRow(args: {
   caption: string;
   layers: any;
   memeDataUrl: string; // base64 PNG from exportMemePNG
+  variationNumber?: number; // Optional: which AI variation was used
 }) {
   const {
     bucket,
@@ -46,6 +47,7 @@ export async function uploadMemeAndInsertRow(args: {
     caption,
     layers,
     memeDataUrl,
+    variationNumber,
   } = args;
 
   const pid = safePart(participantId);
@@ -87,6 +89,7 @@ export async function uploadMemeAndInsertRow(args: {
         layers,
         image_path: filePath,
         image_url: publicUrl,
+        variation_number: variationNumber, // Track which AI variation was used
       },
     ])
     .select()

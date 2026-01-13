@@ -1,5 +1,4 @@
 import { createBrowserRouter } from "react-router-dom";
-import RootLayout from "../Components/Layout/RootLayout";
 
 import Home from "../pages/Home/Home";
 import Consent from "../pages/Consent/Consent";
